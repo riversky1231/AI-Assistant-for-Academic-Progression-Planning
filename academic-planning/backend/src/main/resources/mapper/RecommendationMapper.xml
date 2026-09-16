@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academic.planning.mapper.RecommendationMapper">
+    <select id="selectCandidates" resultType="com.academic.planning.mapper.row.RecommendationCandidateRow">
+        SELECT s.id AS school_id,
+               s.name AS school_name,
+               s.province AS school_province,
+               s.city,
+               s.level,
+               s.description,
+               m.name AS major_name,
+               a.min_score,
+               a.min_rank
+        FROM admission a
+        JOIN school s ON s.id = a.school_id
+        JOIN major m ON m.id = a.major_id AND m.school_id = a.school_id
+        WHERE a.province = #{province}
+          AND a.subject_type = #{subjectType}
+          <if test="majorPreference != null and majorPreference != ''">
+              AND m.name LIKE CONCAT('%', #{majorPreference}, '%')
+          </if>
+          <if test="regions != null and !regions.isEmpty()">
+              AND (
+              <foreach collection="regions" item="region" separator=" OR ">
+                  s.province LIKE CONCAT('%', #{region}, '%')
+                  OR s.city LIKE CONCAT('%', #{region}, '%')
+              </foreach>
+              )
+          </if>
+          AND a.year = (
+              SELECT MAX(a2.year)
+              FROM admission a2
+              WHERE a2.school_id = a.school_id
+                AND a2.major_id = a.major_id
+                AND a2.province = a.province
+                AND a2.subject_type = a.subject_type
+          )
+    </select>
+</mapper>
