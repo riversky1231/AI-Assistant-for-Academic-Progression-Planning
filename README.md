@@ -4,7 +4,7 @@
 
 当前真实记录包括天津财经大学珠江学院发布的《2025年普通本科分专业录取分数线一览表》中的福建省物理类 6 个专业，以及福建农林大学的 7 个普通本科专业和 2 个中外合作办学专业。通过 `GET /schools/{id}` 可查看每条记录的科类、来源名称和原始链接；其余未标注来源的记录仍为本地演示数据。
 
-## 启动
+## 2. 启动与测试
 
 ```powershell
 python -m venv .venv
@@ -16,7 +16,7 @@ python -m venv .venv
 
 前端联调请参阅 [前端接口文档](docs/frontend-api.md)。
 
-## 接口
+## 3. 接口
 
 | 方法 | 路径 | 用途 |
 |---|---|---|
@@ -31,9 +31,11 @@ python -m venv .venv
 ```json
 {
   "province": "福建",
+  "subject_type": "物理类",
   "score": 580,
   "rank": 15000,
-  "major_preference": "计算机"
+  "major_preference": "计算机",
+  "region_preference": "江浙沪"
 }
 ```
 

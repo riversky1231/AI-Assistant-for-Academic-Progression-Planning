@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academic.planning.mapper.SchoolMapper">
+    <select id="selectSchools" resultType="com.academic.planning.entity.School">
+        SELECT id, name, province, city, level, description
+        FROM school
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (name LIKE CONCAT('%', #{keyword}, '%')
+                     OR description LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="province != null and province != ''">
+                AND province = #{province}
+            </if>
+        </where>
+        ORDER BY id
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectAdmissionDetails" resultType="com.academic.planning.mapper.row.AdmissionDetailRow">
+        SELECT a.province,
+               a.subject_type,
+               a.year,
+               a.min_score,
+               a.min_rank,
+               m.id AS major_id,
+               m.name AS major_name,
+               m.category,
+               m.description
+        FROM admission a
+        JOIN major m ON m.id = a.major_id AND m.school_id = a.school_id
+        WHERE a.school_id = #{schoolId}
+        ORDER BY a.year DESC, a.subject_type, m.name
+    </select>
+</mapper>
