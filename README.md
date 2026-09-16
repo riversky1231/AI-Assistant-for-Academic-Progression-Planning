@@ -35,7 +35,7 @@ $env:REDIS_PORT = "6379"
 ## 2. 启动与测试
 
 ```powershell
-cd academic-planning\backend
+cd backend
 mvn test
 mvn spring-boot:run
 ```
