@@ -55,10 +55,31 @@ def initialize_database() -> None:
             );
             """
         )
+        _migrate_admission_metadata(connection)
         has_data = connection.execute("SELECT EXISTS(SELECT 1 FROM school)").fetchone()[0]
         if not has_data:
             _seed_database(connection)
         _add_demo_schools(connection)
+        _add_verified_admissions(connection)
+        _add_fafu_verified_admissions(connection)
+        _add_fafu_regular_admissions(connection)
+
+
+def _migrate_admission_metadata(connection: sqlite3.Connection) -> None:
+    """Add provenance fields while keeping existing local databases usable."""
+    columns = {row["name"] for row in connection.execute("PRAGMA table_info(admission)")}
+    if "subject_group" not in columns:
+        connection.execute(
+            "ALTER TABLE admission ADD COLUMN subject_group TEXT NOT NULL DEFAULT '未区分科类'"
+        )
+    if "source_name" not in columns:
+        connection.execute(
+            "ALTER TABLE admission ADD COLUMN source_name TEXT NOT NULL DEFAULT '本地演示数据'"
+        )
+    if "source_url" not in columns:
+        connection.execute(
+            "ALTER TABLE admission ADD COLUMN source_url TEXT NOT NULL DEFAULT ''"
+        )
 
 
 def _seed_database(connection: sqlite3.Connection) -> None:
@@ -171,3 +192,171 @@ def _add_demo_schools(connection: sqlite3.Connection) -> None:
            VALUES (?, ?, ?, ?, ?, ?)""",
         admissions,
     )
+
+
+def _add_verified_admissions(connection: sqlite3.Connection) -> None:
+    """Add a small, idempotent set of official, traceable admission records."""
+    school = (
+        "天津财经大学珠江学院",
+        "天津",
+        "天津",
+        "民办本科",
+        "财经管理类应用型本科院校。",
+    )
+    connection.execute(
+        "INSERT OR IGNORE INTO school(name, province, city, level, description) VALUES (?, ?, ?, ?, ?)",
+        school,
+    )
+    school_id = connection.execute(
+        "SELECT id FROM school WHERE name = ?", (school[0],)
+    ).fetchone()["id"]
+    records = [
+        ("会计学", "管理学", "培养会计、财务分析与管理能力。", 470, 94712),
+        ("传播学", "文学", "学习新闻传播与媒介实践基础。", 474, 91278),
+        ("国际商务", "管理学", "学习国际贸易与跨境商务基础。", 473, 92111),
+        ("税收学", "经济学", "学习税制、税收管理与实务基础。", 474, 91278),
+        ("经济统计学", "经济学", "学习统计方法与经济数据分析。", 471, 93819),
+        ("金融学", "经济学", "学习金融市场、投资与风险管理基础。", 470, 94712),
+    ]
+    connection.executemany(
+        "INSERT OR IGNORE INTO major(school_id, name, category, description) VALUES (?, ?, ?, ?)",
+        [(school_id, name, category, description) for name, category, description, _, _ in records],
+    )
+    major_ids = {
+        row["name"]: row["id"]
+        for row in connection.execute("SELECT id, name FROM major WHERE school_id = ?", (school_id,))
+    }
+    source_name = "天津财经大学珠江学院：2025年普通本科分专业录取分数线一览表"
+    source_url = (
+        "https://zhujiang.tjufe.edu.cn/_upload/article/files/f2/94/"
+        "da0d6b934c89a24f08810c7af327/85245233-620d-4e2b-8dfb-373ffe5b59ae.pdf"
+    )
+    for name, _, _, min_score, min_rank in records:
+        connection.execute(
+            """INSERT INTO admission(
+                   school_id, major_id, province, year, min_score, min_rank,
+                   subject_group, source_name, source_url
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(school_id, major_id, province, year) DO UPDATE SET
+                   min_score = excluded.min_score,
+                   min_rank = excluded.min_rank,
+                   subject_group = excluded.subject_group,
+                   source_name = excluded.source_name,
+                   source_url = excluded.source_url""",
+            (
+                school_id,
+                major_ids[name],
+                "福建",
+                2025,
+                min_score,
+                min_rank,
+                "物理类",
+                source_name,
+                source_url,
+            ),
+        )
+
+def _add_fafu_verified_admissions(connection: sqlite3.Connection) -> None:
+    """Add official 2025 Fujian records published by Fujian Agriculture and Forestry University."""
+    school = (
+        "福建农林大学",
+        "福建",
+        "福州",
+        "省重点",
+        "以农林科学、生命科学为优势特色的省属重点高校。",
+    )
+    connection.execute(
+        "INSERT OR IGNORE INTO school(name, province, city, level, description) VALUES (?, ?, ?, ?, ?)",
+        school,
+    )
+    school_id = connection.execute(
+        "SELECT id FROM school WHERE name = ?", (school[0],)
+    ).fetchone()["id"]
+    records = [
+        ("风景园林（中外合作办学）", "工学", "学习景观规划、设计与生态保护基础。", 507, 64120),
+        ("农林经济管理（中外合作办学）", "管理学", "学习农林经济、管理与政策分析基础。", 512, 60280),
+    ]
+    connection.executemany(
+        "INSERT OR IGNORE INTO major(school_id, name, category, description) VALUES (?, ?, ?, ?)",
+        [(school_id, name, category, description) for name, category, description, _, _ in records],
+    )
+    major_ids = {
+        row["name"]: row["id"]
+        for row in connection.execute("SELECT id, name FROM major WHERE school_id = ?", (school_id,))
+    }
+    source_name = "福建农林大学戴尔豪西大学联合学院：2025年各省录取分数及排名"
+    source_url = "https://gjxy.fafu.edu.cn/9a/3f/c12072a432703/pagem.htm"
+    for name, _, _, min_score, min_rank in records:
+        connection.execute(
+            """INSERT INTO admission(
+                   school_id, major_id, province, year, min_score, min_rank,
+                   subject_group, source_name, source_url
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(school_id, major_id, province, year) DO UPDATE SET
+                   min_score = excluded.min_score,
+                   min_rank = excluded.min_rank,
+                   subject_group = excluded.subject_group,
+                   source_name = excluded.source_name,
+                   source_url = excluded.source_url""",
+            (
+                school_id,
+                major_ids[name],
+                "福建",
+                2025,
+                min_score,
+                min_rank,
+                "物理类",
+                source_name,
+                source_url,
+            ),
+        )
+
+
+def _add_fafu_regular_admissions(connection: sqlite3.Connection) -> None:
+    """Add ordinary-program records from a public 2025 Fujian admission-data index."""
+    school_id = connection.execute(
+        "SELECT id FROM school WHERE name = ?", ("福建农林大学",)
+    ).fetchone()["id"]
+    records = [
+        ("电气工程及其自动化", "工学", "学习电力系统、电机与自动化控制基础。", 576, 22059, "物理类（再选化学）"),
+        ("计算机科学与技术", "工学", "学习计算机系统、软件与算法基础。", 573, 23443, "物理类（再选化学）"),
+        ("电子信息工程", "工学", "学习电子系统、通信与信息处理基础。", 569, 25291, "物理类（再选化学）"),
+        ("农学", "农学", "学习作物生产、育种与现代农业基础。", 566, 26736, "物理类（再选化学）"),
+        ("法学", "法学", "学习法律基础理论与实务能力。", 563, 28208, "物理类（再选不限）"),
+        ("机械设计制造及其自动化", "工学", "学习机械设计、制造与自动化基础。", 563, 28208, "物理类（再选化学）"),
+        ("软件工程", "工学", "培养软件分析、设计、开发与测试能力。", 562, 28701, "物理类（再选化学）"),
+    ]
+    connection.executemany(
+        "INSERT OR IGNORE INTO major(school_id, name, category, description) VALUES (?, ?, ?, ?)",
+        [(school_id, name, category, description) for name, category, description, *_ in records],
+    )
+    major_ids = {
+        row["name"]: row["id"]
+        for row in connection.execute("SELECT id, name FROM major WHERE school_id = ?", (school_id,))
+    }
+    source_name = "果然优志：2025年福建农林大学在福建高考录取投档分数线及位次"
+    source_url = "https://www.hzgrys.net/score/35/2025/1136.html"
+    for name, _, _, min_score, min_rank, subject_group in records:
+        connection.execute(
+            """INSERT INTO admission(
+                   school_id, major_id, province, year, min_score, min_rank,
+                   subject_group, source_name, source_url
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(school_id, major_id, province, year) DO UPDATE SET
+                   min_score = excluded.min_score,
+                   min_rank = excluded.min_rank,
+                   subject_group = excluded.subject_group,
+                   source_name = excluded.source_name,
+                   source_url = excluded.source_url""",
+            (
+                school_id,
+                major_ids[name],
+                "福建",
+                2025,
+                min_score,
+                min_rank,
+                subject_group,
+                source_name,
+                source_url,
+            ),
+        )

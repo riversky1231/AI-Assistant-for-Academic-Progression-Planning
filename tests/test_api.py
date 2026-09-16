@@ -13,8 +13,8 @@ def test_school_list_and_detail() -> None:
     with TestClient(app) as client:
         schools = client.get("/schools", params={"province": "福建"})
         assert schools.status_code == 200
-        assert len(schools.json()) == 5
-        assert len(client.get("/schools").json()) == 18
+        assert len(schools.json()) == 6
+        assert len(client.get("/schools").json()) == 20
         detail = client.get(f"/schools/{schools.json()[0]['id']}")
         assert detail.status_code == 200
         assert len(detail.json()["admissions"]) == 3
@@ -32,7 +32,7 @@ def test_expanded_seed_data_is_idempotent() -> None:
             table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
             for table in ("school", "major", "admission")
         }
-    assert counts == {"school": 18, "major": 54, "admission": 54}
+    assert counts == {"school": 20, "major": 69, "admission": 69}
 
 
 def test_recommendation_contains_reach_match_and_safety() -> None:

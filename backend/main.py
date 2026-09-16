@@ -3,10 +3,16 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 import re
 from typing import Literal
+import logging
 
 from fastapi import FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import ValidationError
+
+from .agent import build_tools, run_agent
+from .config import get_settings
+from .llm import AgentError, ChatCompletionsClient
+from .models import (SchoolSummary, Major, Admission, SchoolDetail, RecommendationRequest, RecommendedMajor, Recommendation, RecommendationResponse, ChatRequest, ChatResponse)
 
 from .database import get_connection, initialize_database
 
@@ -37,82 +43,6 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
-
-
-class SchoolSummary(BaseModel):
-    id: int
-    name: str
-    province: str
-    city: str
-    level: str
-    description: str
-
-
-class Major(BaseModel):
-    id: int
-    name: str
-    category: str
-    description: str
-
-
-class Admission(BaseModel):
-    province: str
-    year: int
-    min_score: int
-    min_rank: int
-    major: Major
-
-
-class SchoolDetail(SchoolSummary):
-    admissions: list[Admission]
-
-
-class RecommendationRequest(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
-    province: str = Field(min_length=2, max_length=20)
-    score: int = Field(ge=0, le=750)
-    rank: int = Field(ge=1, le=10_000_000)
-    major_preference: str | None = Field(default=None, max_length=50)
-    region_preference: str | None = Field(default=None, max_length=50)
-
-    @field_validator("major_preference", "region_preference")
-    @classmethod
-    def empty_string_to_none(cls, value: str | None) -> str | None:
-        return value or None
-
-
-class RecommendedMajor(BaseModel):
-    name: str
-    min_score: int
-    min_rank: int
-
-
-class Recommendation(BaseModel):
-    category: Literal["冲", "稳", "保"]
-    gap: int
-    score_gap: int
-    match_gap: int
-    school: SchoolSummary
-    major: RecommendedMajor
-    reason: str
-
-
-class RecommendationResponse(BaseModel):
-    message: str
-    recommendations: dict[str, list[Recommendation]]
-    disclaimer: str
-
-
-class ChatRequest(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
-    message: str = Field(min_length=1, max_length=1000)
-    context: str | None = Field(default=None, max_length=2000)
-
-
-class ChatResponse(BaseModel):
-    answer: str
-    mode: Literal["rule_based"]
-    disclaimer: str
 
 
 @app.get("/health", tags=["system"])
@@ -154,6 +84,7 @@ def get_school(school_id: int = Path(ge=1)) -> SchoolDetail:
             raise HTTPException(status_code=404, detail="未找到该院校")
         rows = connection.execute(
             """SELECT a.province, a.year, a.min_score, a.min_rank,
+                      a.subject_group, a.source_name, a.source_url,
                       m.id AS major_id, m.name AS major_name, m.category, m.description
                FROM admission a JOIN major m ON m.id = a.major_id
                WHERE a.school_id = ? ORDER BY a.year DESC, m.name""",
@@ -162,6 +93,7 @@ def get_school(school_id: int = Path(ge=1)) -> SchoolDetail:
     admissions = [
         Admission(
             province=row["province"], year=row["year"], min_score=row["min_score"], min_rank=row["min_rank"],
+            subject_group=row["subject_group"], source_name=row["source_name"], source_url=row["source_url"],
             major=Major(id=row["major_id"], name=row["major_name"], category=row["category"], description=row["description"]),
         )
         for row in rows
@@ -240,17 +172,49 @@ def recommend(request: RecommendationRequest) -> RecommendationResponse:
     return RecommendationResponse(
         message="已结合分数与位次生成冲、稳、保建议。" if has_results else "暂无符合条件的数据。",
         recommendations=grouped,
-        disclaimer="推荐基于本地测试数据与规则，仅供参考，不承诺录取结果。",
+        disclaimer="推荐基于本地演示数据和少量来源标注的录取记录，仅供参考，不承诺录取结果。",
     )
 
 
 @app.post("/chat", response_model=ChatResponse, tags=["chat"])
 def chat(request: ChatRequest) -> ChatResponse:
+    try:
+        settings = get_settings()
+    except ValidationError:
+        return rule_based_chat(request, "invalid_configuration")
+    if not settings.enabled:
+        return rule_based_chat(request, "disabled")
+    if not settings.api_key.get_secret_value().strip():
+        return rule_based_chat(request, "missing_api_key")
+    try:
+        answer, used = run_agent(
+            request, ChatCompletionsClient(settings),
+            build_tools(list_schools, get_school, recommend), settings.max_rounds,
+        )
+        return ChatResponse(
+            answer=answer, mode="llm_agent", tools_used=used,
+            disclaimer="本地数据包含演示数据与少量来源记录，模型回答仅供参考，不承诺录取结果；请核对院校官方信息。",
+        )
+    except AgentError as exc:
+        # Only log a controlled code, never provider bodies or user messages.
+        reason = str(exc)
+        logging.getLogger(__name__).warning("LLM agent fallback: %s", reason)
+        return rule_based_chat(request, reason)
+
+
+def rule_based_chat(request: ChatRequest, reason: str) -> ChatResponse:
     message = request.message
     if any(word in message for word in ("分数", "位次", "推荐", "学校", "专业")):
         answer = "可先填写省份、分数、位次和专业偏好，再调用 /recommend 获取本地数据推荐。具体录取数据以 /schools 返回内容为准。"
     elif any(word in message for word in ("考研", "人工智能", "软件工程")):
         answer = "软件工程可报考人工智能等相关方向；建议结合目标院校招生目录、初试科目和个人基础制定复习计划。当前后端未接入实时招生政策。"
     else:
-        answer = "这是基础规则对话服务。C 组接入 Agent + LLM 后，可在保留本地事实数据约束的前提下扩展回答能力。"
-    return ChatResponse(answer=answer, mode="rule_based", disclaimer="信息仅供参考；数据不足时请以院校官方招生信息为准。")
+        answer = "当前为基础规则对话服务。你可以查询院校、专业与冲稳保建议；启用 LLM 后支持自然语言工具调用和多轮对话。"
+    if reason != "disabled":
+        answer = "智能对话暂不可用，以下为基础规则提示。" + answer
+    return ChatResponse(
+        answer=answer,
+        mode="rule_based",
+        fallback_reason=reason,
+        disclaimer="信息仅供参考；数据不足时请以院校官方招生信息为准。",
+    )
