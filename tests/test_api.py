@@ -46,6 +46,25 @@ def test_recommendation_contains_reach_match_and_safety() -> None:
     assert groups["冲"]
     assert groups["稳"]
     assert groups["保"]
+    assert "分数差" in groups["稳"][0]["reason"]
+
+
+def test_region_alias_and_score_affect_recommendation() -> None:
+    base = {"province": "福建", "rank": 15000, "major_preference": "计算机"}
+    with TestClient(app) as client:
+        region_response = client.post(
+            "/recommend",
+            json={**base, "score": 580, "region_preference": "江浙沪"},
+        )
+        low_score = client.post("/recommend", json={**base, "score": 100}).json()
+        high_score = client.post("/recommend", json={**base, "score": 750}).json()
+
+    assert region_response.status_code == 200
+    region_groups = region_response.json()["recommendations"]
+    recommendations = [item for items in region_groups.values() for item in items]
+    assert recommendations
+    assert {item["school"]["province"] for item in recommendations} <= {"江苏", "浙江", "上海"}
+    assert low_score["recommendations"] != high_score["recommendations"]
 
 
 def test_invalid_input_missing_school_and_no_data() -> None:

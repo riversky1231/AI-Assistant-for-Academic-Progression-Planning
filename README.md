@@ -17,7 +17,7 @@ python -m uvicorn backend.main:app --reload
 | GET | `/health` | 健康检查 |
 | GET | `/schools` | 学校列表，可传 `keyword`、`province`、`limit` |
 | GET | `/schools/{id}` | 学校、专业与录取数据详情 |
-| POST | `/recommend` | 依据位次差返回冲、稳、保建议 |
+| POST | `/recommend` | 结合分数差与位次差返回冲、稳、保建议 |
 | POST | `/chat` | 基础规则对话，供后续 Agent + LLM 接入替换 |
 
 `/recommend` 请求示例：
@@ -32,5 +32,6 @@ python -m uvicorn backend.main:app --reload
 ```
 
 推荐结果只使用本地测试数据，且会明确标注“仅供参考”。
+地区偏好支持单个省市、`江浙沪`、`长三角`，以及使用顿号、逗号或斜杠分隔的多个地区。
 
 # AI-Assistant-for-Academic-Progression-Planning

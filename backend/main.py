@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import re
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Path, Query
@@ -8,6 +9,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .database import get_connection, initialize_database
+
+
+REGION_ALIASES = {
+    "江浙沪": ("江苏", "浙江", "上海"),
+    "长三角": ("江苏", "浙江", "上海"),
+}
+SCORE_TO_RANK_WEIGHT = 100
 
 
 @asynccontextmanager
@@ -82,6 +90,8 @@ class RecommendedMajor(BaseModel):
 class Recommendation(BaseModel):
     category: Literal["冲", "稳", "保"]
     gap: int
+    score_gap: int
+    match_gap: int
     school: SchoolSummary
     major: RecommendedMajor
     reason: str
@@ -167,6 +177,14 @@ def _category_for_gap(gap: int) -> Literal["冲", "稳", "保"]:
     return "稳"
 
 
+def _expand_region_preference(value: str) -> list[str]:
+    normalized = value.replace(" ", "")
+    if normalized in REGION_ALIASES:
+        return list(REGION_ALIASES[normalized])
+    parts = [part for part in re.split(r"[、,，/]+", normalized) if part]
+    return list(dict.fromkeys(parts))
+
+
 @app.post("/recommend", response_model=RecommendationResponse, tags=["recommendation"])
 def recommend(request: RecommendationRequest) -> RecommendationResponse:
     conditions = ["a.province = ?"]
@@ -175,8 +193,11 @@ def recommend(request: RecommendationRequest) -> RecommendationResponse:
         conditions.append("m.name LIKE ?")
         parameters.append(f"%{request.major_preference}%")
     if request.region_preference:
-        conditions.append("(s.province LIKE ? OR s.city LIKE ?)")
-        parameters.extend([f"%{request.region_preference}%", f"%{request.region_preference}%"])
+        regions = _expand_region_preference(request.region_preference)
+        region_conditions = ["(s.province LIKE ? OR s.city LIKE ?)" for _ in regions]
+        conditions.append(f"({' OR '.join(region_conditions)})")
+        for region in regions:
+            parameters.extend([f"%{region}%", f"%{region}%"])
     where_clause = " AND ".join(conditions)
     with get_connection() as connection:
         rows = connection.execute(
@@ -193,23 +214,31 @@ def recommend(request: RecommendationRequest) -> RecommendationResponse:
         ).fetchall()
     grouped: dict[str, list[Recommendation]] = {"冲": [], "稳": [], "保": []}
     for row in rows:
-        gap = row["min_rank"] - request.rank
-        category = _category_for_gap(gap)
-        reason = f"历史最低位次 {row['min_rank']}，与您的位次相差 {abs(gap)} 名。"
+        rank_gap = row["min_rank"] - request.rank
+        score_gap = request.score - row["min_score"]
+        match_gap = rank_gap + score_gap * SCORE_TO_RANK_WEIGHT
+        category = _category_for_gap(match_gap)
+        reason = (
+            f"历史最低分 {row['min_score']}、最低位次 {row['min_rank']}；"
+            f"您的分数差 {score_gap:+d} 分、位次差 {rank_gap:+d} 名，综合判定为“{category}”。"
+        )
         grouped[category].append(
             Recommendation(
-                category=category, gap=gap,
+                category=category,
+                gap=rank_gap,
+                score_gap=score_gap,
+                match_gap=match_gap,
                 school=SchoolSummary(**{key: row[key] for key in SchoolSummary.model_fields}),
                 major=RecommendedMajor(name=row["major_name"], min_score=row["min_score"], min_rank=row["min_rank"]),
                 reason=reason,
             )
         )
     for category in grouped:
-        grouped[category].sort(key=lambda item: abs(item.gap))
+        grouped[category].sort(key=lambda item: abs(item.match_gap))
         grouped[category] = grouped[category][:5]
     has_results = any(grouped.values())
     return RecommendationResponse(
-        message="已按位次差生成冲、稳、保建议。" if has_results else "暂无符合条件的数据。",
+        message="已结合分数与位次生成冲、稳、保建议。" if has_results else "暂无符合条件的数据。",
         recommendations=grouped,
         disclaimer="推荐基于本地测试数据与规则，仅供参考，不承诺录取结果。",
     )
