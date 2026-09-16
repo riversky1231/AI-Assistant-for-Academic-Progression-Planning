@@ -11,7 +11,20 @@
 Content-Type: application/json
 ```
 
-开发环境允许 `http://localhost:<任意端口>` 和 `http://127.0.0.1:<任意端口>` 跨域访问。生产环境需在后端单独收紧 CORS 来源。
+## 微信小程序接入
+
+小程序使用 `wx.request`，不受浏览器 CORS 限制；后端的 CORS 设置不会决定小程序能否请求。
+
+- 真机和体验版必须使用已备案的 HTTPS 域名，并在微信公众平台的“开发管理 → 开发设置 → 服务器域名”添加该域名到 `request 合法域名`。
+- `127.0.0.1`、`localhost` 和局域网 HTTP 地址只适合开发者工具调试。开发阶段可在开发者工具中勾选“不校验合法域名、web-view（业务域名）、TLS 版本以及 HTTPS 证书”。不要依赖这个开关发布体验版或正式版。
+- 建议在 `miniprogram/config/api.ts` 集中维护地址，并为开发和生产环境分别配置：
+
+```ts
+export const API_BASE = "https://api.example.com";
+// 本地开发时可临时使用："http://127.0.0.1:8000"
+```
+
+后端仍允许本机浏览器端口跨域，便于 Swagger、管理页或 H5 调试；这不影响小程序。
 
 ## 1. 健康检查
 
@@ -227,21 +240,41 @@ Content-Type: application/json
 
 以上降级仍返回 `200`，因为接口已经给出可展示的基础回答。只有请求体不合法时才返回 `422`。
 
-## 推荐的前端调用封装
+## 推荐的小程序调用封装
 
 ```ts
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000";
+import { API_BASE } from "../config/api";
 
-export async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+export function request<T>(path: string, method: "GET" | "POST", data?: object): Promise<T> {
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: `${API_BASE}${path}`,
+      method,
+      data,
+      header: { "content-type": "application/json" },
+      success(response) {
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          resolve(response.data as T);
+          return;
+        }
+        reject({ statusCode: response.statusCode, data: response.data });
+      },
+      fail(error) {
+        reject({ type: "network_error", error });
+      },
+    });
   });
-  const data = await response.json();
-  if (!response.ok) throw data;
-  return data as T;
 }
+
+export const getHealth = () => request<{ status: string }>("/health", "GET");
+export const getSchools = (data?: { keyword?: string; province?: string; limit?: number }) =>
+  request("/schools", "GET", data);
+export const recommend = (data: {
+  province: string; score: number; rank: number;
+  major_preference?: string; region_preference?: string;
+}) => request("/recommend", "POST", data);
+export const chat = (data: { message: string; context?: string; history?: object[] }) =>
+  request("/chat", "POST", data);
 ```
 
-页面加载时可请求 `GET /health`；网络异常、非 `200` 响应和 `422` 分开处理。对 `/chat` 的 `rule_based` 响应不要按网络错误处理。
+页面加载时可请求 `GET /health`；网络异常、非 `2xx` 响应和 `422` 分开处理。对 `/chat` 的 `rule_based` 响应不要按网络错误处理。
