@@ -14,6 +14,8 @@ python -m venv .venv
 
 启动后访问 `http://127.0.0.1:8000/docs` 查看 Swagger 文档。
 
+前端联调请参阅 [前端接口文档](docs/frontend-api.md)。
+
 ## 接口
 
 | 方法 | 路径 | 用途 |

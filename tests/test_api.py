@@ -9,6 +9,19 @@ def test_health_and_openapi() -> None:
         assert client.get("/openapi.json").status_code == 200
 
 
+def test_local_frontend_cors_preflight() -> None:
+    with TestClient(app) as client:
+        response = client.options(
+            "/chat",
+            headers={
+                "Origin": "http://localhost:5173",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+
 def test_school_list_and_detail() -> None:
     with TestClient(app) as client:
         schools = client.get("/schools", params={"province": "福建"})
