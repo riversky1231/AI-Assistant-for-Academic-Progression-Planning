@@ -16,7 +16,9 @@ INSERT INTO school (id, name, province, city, level, description) VALUES
     (15, '武汉理工大学', '湖北', '武汉', '211', '材料、交通与工程学科特色高校。'),
     (16, '中南大学', '湖南', '长沙', '985', '综合性研究型大学。'),
     (17, '合肥工业大学', '安徽', '合肥', '211', '工程教育与科研特色高校。'),
-    (18, '河海大学', '江苏', '南京', '211', '水利、环境与工程学科特色高校。');
+    (18, '河海大学', '江苏', '南京', '211', '水利、环境与工程学科特色高校。')
+-- Keep existing school records when restarting after a partial initialization.
+ON DUPLICATE KEY UPDATE id = school.id;
 
 INSERT INTO major (school_id, name, category, description)
 SELECT s.id, templates.name, '工学', templates.description
@@ -26,6 +28,8 @@ CROSS JOIN (
     UNION ALL SELECT '软件工程', '培养软件分析、设计、开发与测试能力。'
     UNION ALL SELECT '人工智能', '学习机器学习、数据分析与智能系统基础。'
 ) templates
+-- End the SELECT explicitly so ON is not parsed as a JOIN condition.
+WHERE 1 = 1
 ON DUPLICATE KEY UPDATE
     category = VALUES(category),
     description = VALUES(description);

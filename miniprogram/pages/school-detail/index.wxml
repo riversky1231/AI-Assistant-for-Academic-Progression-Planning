@@ -1,0 +1,14 @@
+<view class="page detail-page">
+  <state-card wx:if="{{loading}}" loading />
+  <state-card wx:elif="{{error}}" title="暂时无法查看院校" description="{{error}}" action="重新加载" bindretry="load" />
+  <block wx:elif="{{school}}">
+    <view class="school-hero"><view class="between"><view class="badge large">{{school.initial}}</view><text class="eyebrow">UNIVERSITY PROFILE</text></view><view class="school-name">{{school.name}}</view><view class="location">{{school.province}} · {{school.city}}<text class="tag">{{school.level}}</text></view><view class="school-description">{{school.description || '暂无院校简介'}}</view></view>
+    <view class="section"><view class="section-head"><text class="section-title">专业与历史录取</text><text class="muted">{{filtered.length}} 条记录</text></view>
+      <view class="filter-row"><picker range="{{provinces}}" value="{{provinceIndex}}" data-field="provinceIndex" bindchange="change"><view>{{provinces[provinceIndex]}} ⌄</view></picker><picker range="{{subjects}}" value="{{subjectIndex}}" data-field="subjectIndex" bindchange="change"><view>{{subjects[subjectIndex]}} ⌄</view></picker><picker range="{{years}}" value="{{yearIndex}}" data-field="yearIndex" bindchange="change"><view>{{years[yearIndex]}} ⌄</view></picker></view>
+      <state-card wx:if="{{!filtered.length}}" title="暂无对应录取记录" description="试试其他生源地、科类或年份。暂无数据不代表该校不招生。" />
+      <view class="card admission" wx:for="{{filtered}}" wx:key="key"><view class="major-name">{{item.major.name}}</view><view class="admission-meta">{{item.province}} · {{item.subject_type}} · {{item.year}} 年 <text class="category">{{item.major.category}}</text></view><view class="metrics"><view><text class="metric-number">{{item.min_score}}</text><text class="metric-label">历史最低分</text></view><view><text class="metric-number">{{item.rankText}}</text><text class="metric-label">历史最低位次</text></view></view><view class="major-description" wx:if="{{item.major.description}}">{{item.major.description}}</view></view>
+    </view>
+    <view class="notice section">本地演示录取数据仅供了解与比较，不代表当年招生计划。报考前请核对院校及省级招考机构公布的信息。</view>
+    <button class="primary section" bindtap="plan">结合我的位次，查看推荐 ↗</button>
+  </block>
+</view>

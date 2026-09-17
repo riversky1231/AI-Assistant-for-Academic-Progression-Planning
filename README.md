@@ -1,4 +1,27 @@
-# 升学规划智能助手：后端 + Agent MVP
+# 升学规划智能助手
+
+## 当前版本：Java 后端 + 微信小程序
+
+当前可运行主后端是 `backend/pom.xml` 对应的 Spring Boot 工程，默认端口 **8080**，使用 MySQL、Redis 和账号 Token 鉴权。下方 Python / Agent 说明为历史资料，与当前 Java 路由不完全一致。
+
+已新增原生微信小程序：包含首页、院校库、院校详情、志愿推荐、冲稳保结果、我的、账号登录。直接用微信开发者工具导入仓库根目录即可；配置与验收见 [小程序使用说明](miniprogram/README.md)，实际 Java 接口见 [前端接口文档](docs/frontend-api.md)。
+
+Java 后端启动：先按 `backend/src/main/resources/application.yml` 配置 MySQL 和 Redis，创建 `academic_planning` 数据库，然后在 `backend` 目录执行：
+
+```powershell
+mvn spring-boot:run
+```
+
+程序从 `../sql/schema.sql` 和 `../sql/data.sql` 初始化结构与演示数据。已有数据库请先确认初始化脚本适合当前数据。Swagger 为 `http://127.0.0.1:8080/swagger-ui.html`。前端默认连接 `http://127.0.0.1:8080`，部署地址在 `miniprogram/config/api.js` 中配置。
+
+前端检查（仓库根目录）：
+
+```powershell
+node --test tests/miniprogram.test.cjs
+python tests/check_miniprogram_markup.py
+```
+
+## 历史版本：Python 后端与 Agent MVP
 
 本仓库实现 FastAPI + SQLite 后端，以及支持 DeepSeek / OpenAI 兼容 Chat Completions 接口的工具调用 Agent。包含本地演示招生数据，以及少量可追溯的真实招生记录，用于课程项目联调。推荐结果仅供参考，报考前须以省级招考机构和院校当年公布的信息为准。
 

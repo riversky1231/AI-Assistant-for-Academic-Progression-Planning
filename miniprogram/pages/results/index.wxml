@@ -1,0 +1,17 @@
+<view class="page">
+  <state-card wx:if="{{!ready}}" title="还没有推荐结果" description="填写考生档案，找到适合自己的志愿方向" action="去填写" bindretry="edit" />
+  <block wx:else>
+    <view class="eyebrow">YOUR POSSIBILITIES</view><view class="title heading">未来，多一些可能。</view>
+    <view class="summary card"><view class="between"><text class="summary-title">{{profile.province}} · {{profile.subject_type}}</text><button class="text-button" bindtap="edit">调整条件 ↗</button></view><view class="scores"><view><text>{{profile.score}}</text> 分</view><view><text>{{rankText}}</text> 位</view></view><view class="preferences">{{profile.major_preference || '专业不限'}} · {{profile.region_preference || '地区不限'}}</view><view class="generated">{{generatedText}} 生成 · 本次 {{total}} 条专业推荐</view></view>
+    <view class="between section-head section"><text class="section-title">我的推荐清单</text><button class="text-button" bindtap="explain">了解推荐依据 ⓘ</button></view>
+    <view class="group-tabs"><button wx:for="{{groups}}" wx:key="name" class="group-tab {{active === index ? item.tone + ' selected' : ''}}" data-index="{{index}}" bindtap="select"><text>{{item.title}}</text><text class="count">{{item.items.length}}</text></button></view>
+    <state-card wx:if="{{!total}}" title="暂无符合条件的数据" description="当前数据可能尚未覆盖你的省份、科类或偏好。可以调整条件后重试，暂无数据不代表无法报考。" action="调整条件" bindretry="edit" />
+    <state-card wx:elif="{{!items.length}}" title="本组暂无推荐" description="查看其他分组，或调整专业和地区偏好" />
+    <view wx:for="{{items}}" wx:key="key" class="card result-card">
+      <view class="between"><view class="row result-school" data-id="{{item.school.id}}" bindtap="detail" role="button"><view class="badge">{{item.school.initial}}</view><view class="school-copy"><view class="school-name">{{item.school.name}}</view><view class="muted">{{item.school.province}} · {{item.school.city}} · {{item.school.level}}</view></view></view><text class="category-tag {{groups[active].tone}}">{{item.category}}</text></view>
+      <view class="major">{{item.major.name}}</view><view class="result-metrics"><view><text>{{item.major.min_score}}</text><view>历史最低分</view></view><view><text>{{item.rankText}}</text><view>历史最低位次</view></view><view><text>{{item.gapText}}</text><view>位次差</view></view></view>
+      <view class="reason">{{item.reason}}</view><button class="text-button detail-link" data-id="{{item.school.id}}" bindtap="detail">查看院校与录取详情 ↗</button>
+    </view>
+    <view class="notice section">{{disclaimer || '推荐基于本地演示数据与规则，仅供参考，不承诺录取结果。'}}</view><button class="secondary section" bindtap="edit">修改条件，重新推荐</button>
+  </block>
+</view>

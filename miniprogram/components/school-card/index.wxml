@@ -1,0 +1,4 @@
+<view class="school" bindtap="open" role="button" aria-label="查看{{school.name}}详情">
+  <view class="top"><view class="badge">{{school.initial}}</view><view class="info"><view class="name">{{school.name}}</view><view class="meta">{{school.province}} · {{school.city}} <text class="level">{{school.level}}</text></view></view><text class="arrow">↗</text></view>
+  <view class="description">{{school.description || '查看院校专业与历史录取信息'}}</view>
+</view>

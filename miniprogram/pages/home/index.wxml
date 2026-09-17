@@ -1,0 +1,27 @@
+<view class="page tab-page">
+  <view class="between welcome"><text class="eyebrow">YOUR NEXT CHAPTER</text><view class="brand-dot">为热爱，选未来</view></view>
+  <view class="hero">
+    <view class="hero-tag">向远 · 升学规划</view>
+    <view class="hero-title"><view>每一个选择，</view><view>都通向更远的你。</view></view>
+    <view class="hero-description">从了解自己开始，找到适合的大学与专业。</view>
+    <button class="hero-button" bindtap="plan">开启我的升学规划 <text>↗</text></button>
+    <view class="orbit orbit-one"></view><view class="orbit orbit-two"></view><view class="star">✦</view>
+    <view class="hero-bottom">EXPLORE YOUR POSSIBILITIES <view class="hero-line"></view> 01</view>
+  </view>
+  <view class="profile-strip" bindtap="plan" role="button">
+    <view class="profile-icon">档</view><view class="profile-copy"><view class="strip-title">{{profile ? '我的考生档案' : '让推荐，更了解你'}}</view><view class="muted">{{profile ? profile.province + ' · ' + profile.subject_type + ' · ' + profile.score + ' 分 · ' + rankText + ' 位' : '填写分数与位次，开启个性化推荐'}}</view></view><text>›</text>
+  </view>
+  <view class="section"><view class="section-head"><text class="section-title">升学，从这里出发</text><text class="eyebrow">EXPLORE</text></view>
+    <view class="entry-grid">
+      <view class="entry entry-green" bindtap="schools" role="button"><view class="entry-top"><text class="entry-icon">▥</text><text>↗</text></view><view class="entry-title">发现理想院校</view><view class="entry-desc">查学校 · 看专业 · 读录取数据</view></view>
+      <view class="entry entry-cream" bindtap="plan" role="button"><view class="entry-top"><text class="entry-icon">◎</text><text>↗</text></view><view class="entry-title">我的志愿方向</view><view class="entry-desc">冲一冲 · 稳一稳 · 保一保</view></view>
+    </view>
+  </view>
+  <view class="section"><view class="section-head"><text class="section-title">逛逛院校库</text><button class="text-button" bindtap="schools">查看全部 ↗</button></view>
+    <state-card wx:if="{{!loggedIn}}" title="你的大学探索之旅" description="登录后，查看院校、专业与历史录取信息" action="登录并探索" bindretry="login" />
+    <state-card wx:elif="{{loading}}" loading />
+    <state-card wx:elif="{{error}}" title="暂时未能加载院校" description="{{error}}" action="重新加载" bindretry="load" />
+    <block wx:else><school-card wx:for="{{schools}}" wx:key="id" school="{{item}}" /><state-card wx:if="{{!schools.length}}" title="院校库正在准备中" description="暂时没有可展示的院校" /></block>
+  </view>
+  <view class="footnote">选择有方向，未来有更多可能。<view>历史数据仅供参考，请以当年官方招生信息为准。</view></view>
+</view>

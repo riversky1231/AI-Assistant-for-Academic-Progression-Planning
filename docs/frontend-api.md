@@ -1,132 +1,117 @@
-# 前端接口文档
+# 微信小程序接口契约（当前 Java 后端）
 
-后端默认地址：`http://127.0.0.1:8000`。启动后可访问：
+以 `backend/src/main/java/com/academic/planning/controller`、DTO、VO 和 `application.yml` 为准。旧版 Python API 的 8000 端口、裸数组响应、`/chat` 和综合分数推荐规则不适用于当前服务。
 
-- Swagger UI：`/docs`
-- OpenAPI JSON：`/openapi.json`
+默认服务地址：`http://127.0.0.1:8080`。Swagger：`/swagger-ui.html`，OpenAPI：`/v3/api-docs`。小程序导入、环境域名与测试见 [使用说明](../miniprogram/README.md)。
 
-所有请求和响应均使用 JSON，除 `GET /health` 与 `GET /schools` 外，请求头应包含：
+## 公共约定
+
+请求使用 `Content-Type: application/json`。响应使用统一包装：
+
+```json
+{ "code": 0, "message": "success", "data": {} }
+```
+
+`code=0` 表示成功；失败使用相应 HTTP 状态码及 `{ "code": 401, "message": "请先登录", "data": null }`。Java DTO/VO 使用 Jackson `SNAKE_CASE`，即 `subject_type`、`token_value`、`min_rank` 等。`/auth/me` 的 Map 键 `userId` 保持原样。
+
+除登录、健康检查外，业务接口必须携带登录响应指定的请求头，当前是：
 
 ```http
-Content-Type: application/json
+satoken: <token_value>
 ```
 
-## 微信小程序接入
+## 1. 登录与账号
 
-小程序使用 `wx.request`，不受浏览器 CORS 限制；后端的 CORS 设置不会决定小程序能否请求。
-
-- 真机和体验版必须使用已备案的 HTTPS 域名，并在微信公众平台的“开发管理 → 开发设置 → 服务器域名”添加该域名到 `request 合法域名`。
-- `127.0.0.1`、`localhost` 和局域网 HTTP 地址只适合开发者工具调试。开发阶段可在开发者工具中勾选“不校验合法域名、web-view（业务域名）、TLS 版本以及 HTTPS 证书”。不要依赖这个开关发布体验版或正式版。
-- 建议在 `miniprogram/config/api.ts` 集中维护地址，并为开发和生产环境分别配置：
-
-```ts
-export const API_BASE = "https://api.example.com";
-// 本地开发时可临时使用："http://127.0.0.1:8000"
-```
-
-后端仍允许本机浏览器端口跨域，便于 Swagger、管理页或 H5 调试；这不影响小程序。
-
-## 1. 健康检查
-
-`GET /health`
+### POST /auth/login
 
 ```json
-{"status": "ok"}
+{ "username": "账号", "password": "密码" }
 ```
 
-前端可在应用初始化或服务重试时使用此接口判断后端是否可达。
-
-## 2. 院校列表
-
-`GET /schools`
-
-| 查询参数 | 类型 | 必填 | 说明 |
-|---|---:|:---:|---|
-| `keyword` | string | 否 | 院校名称或简介关键词，1–50 个字符 |
-| `province` | string | 否 | 学校所在地省份，2–20 个字符；不是考生生源地 |
-| `limit` | number | 否 | 返回条数，默认 `20`，范围 `1–50` |
-
-示例：`GET /schools?province=福建&keyword=农林&limit=10`
-
-成功响应 `200`：
-
-以下为字段结构示例，数值会随请求条件和本地数据变化：
-
-```json
-[
-  {
-    "id": 20,
-    "name": "福建农林大学",
-    "province": "福建",
-    "city": "福州",
-    "level": "省重点",
-    "description": "以农林科学、生命科学为优势特色的省属重点高校。"
-  }
-]
-```
-
-没有匹配项时返回 `200` 和空数组 `[]`，前端应显示“暂无匹配院校”，不要将其当成服务错误。
-
-## 3. 院校与录取详情
-
-`GET /schools/{school_id}`
-
-`school_id` 为院校列表中返回的正整数 `id`。不要根据数据库顺序猜测 ID。
-
-成功响应 `200`：
+账号不能为空，最多 50 字符；密码不能为空，长度 8–100。成功响应的 `data`：
 
 ```json
 {
-  "id": 20,
-  "name": "福建农林大学",
+  "token_name": "satoken",
+  "token_value": "服务端随机Token",
+  "timeout": 7200,
+  "permissions": ["school:read", "recommend:use"]
+}
+```
+
+Token 在 Redis 中保存，每次通过鉴权后延长 2 小时有效期；不要把登录时的 `timeout` 当作不可续期的本地到期时间。错误账号或密码返回 401，同一用户名 5 分钟超过 10 次尝试返回 429。前端不自动重试登录。
+
+### GET /auth/me
+
+`data` 示例：
+
+```json
+{ "userId": 1, "permissions": ["school:read", "recommend:use"], "roles": ["admin"] }
+```
+
+### POST /auth/logout
+
+无需请求体。删除当前 Redis Token，成功 `data=null`。小程序成功后清理 Token、本机考生档案和最近推荐。
+
+## 2. 健康检查
+
+`GET /health` 无需登录。成功响应：
+
+```json
+{ "code": 0, "message": "success", "data": { "status": "ok" } }
+```
+
+此接口说明 HTTP 服务可达，不是 MySQL、Redis、账号权限的全面检查。
+
+## 3. 院校列表
+
+`GET /schools`，需要 `school:read` 权限。
+
+| 参数 | 约束 | 含义 |
+|---|---|---|
+| keyword | 可选，1–50 字符 | 校名或简介关键词；空值应省略 |
+| province | 可选，2–20 字符 | 学校所在地，不是生源地 |
+| limit | 默认 20，范围 1–50 | 条数上限，无分页游标和总数 |
+
+成功 `data` 是数组，字段为 `id`、`name`、`province`、`city`、`level`、`description`。无匹配时为 `[]`。前端只能称“本次展示 N 所”，不能将其作为数据库院校总数。
+
+## 4. 院校详情
+
+`GET /schools/{schoolId}`，正整数 ID，需要 `school:read` 权限。不存在返回 404。
+
+成功 `data` 的结构示例（非实时数据）：
+
+```json
+{
+  "id": 2,
+  "name": "福州大学",
   "province": "福建",
   "city": "福州",
-  "level": "省重点",
-  "description": "以农林科学、生命科学为优势特色的省属重点高校。",
+  "level": "211",
+  "description": "国家双一流建设高校。",
   "admissions": [
     {
       "province": "福建",
+      "subject_type": "物理类",
       "year": 2025,
-      "min_score": 573,
-      "min_rank": 23443,
-      "subject_group": "物理类（再选化学）",
-      "source_name": "果然优志：2025年福建农林大学在福建高考录取投档分数线及位次",
-      "source_url": "https://www.hzgrys.net/score/35/2025/1136.html",
-      "major": {
-        "id": 61,
-        "name": "计算机科学与技术",
-        "category": "工学",
-        "description": "学习计算机系统、软件与算法基础。"
-      }
+      "min_score": 609,
+      "min_rank": 12500,
+      "major": { "id": 4, "name": "计算机科学与技术", "category": "工学", "description": "学习计算机系统、软件与算法基础。" }
     }
   ]
 }
 ```
 
-字段说明：
+`admissions[].province` 为考生生源地。当前 Java VO **没有**旧版的 `source_name`、`source_url`、`subject_group` 字段，不应虚构来源链接。现有 SQL 为演示数据，页面明确标注历史数据仅供参考。
 
-| 字段 | 含义 |
-|---|---|
-| `province` | 此条录取数据对应的考生生源省份 |
-| `subject_group` | 选科或科类要求；历史演示数据可能为“未区分科类” |
-| `source_name` / `source_url` | 数据来源。`source_name=本地演示数据` 或空链接时，前端应标注为演示数据 |
-| `min_score` / `min_rank` | 历史最低分和最低位次，不是录取承诺 |
+## 5. 冲稳保推荐
 
-不存在的 `school_id` 返回 `404`：
-
-```json
-{"detail": "未找到该院校"}
-```
-
-## 4. 冲稳保推荐
-
-`POST /recommend`
-
-请求体：
+`POST /recommend`，需要 `recommend:use` 权限。
 
 ```json
 {
   "province": "福建",
+  "subject_type": "物理类",
   "score": 580,
   "rank": 15000,
   "major_preference": "计算机",
@@ -134,147 +119,46 @@ export const API_BASE = "https://api.example.com";
 }
 ```
 
-| 字段 | 类型 | 必填 | 约束 |
-|---|---:|:---:|---|
-| `province` | string | 是 | 考生生源省份，2–20 个字符 |
-| `score` | integer | 是 | `0–750` |
-| `rank` | integer | 是 | `1–10000000`，数值越小位次越靠前 |
-| `major_preference` | string/null | 否 | 专业名称关键词，最多 50 个字符 |
-| `region_preference` | string/null | 否 | 学校所在地；可使用 `江浙沪`、`长三角`，或用 `、`、`,`、`，`、`/` 分隔多个地区 |
+省份必填，2–20 字符；科类仅允许 `物理类` / `历史类`；分数为 0–750 的整数，位次为 1–10000000 的整数。两个偏好可省略或传 `null`，均最多 50 字符。地区可用 `江浙沪`、`长三角` 或顿号、英文/中文逗号、斜杠分隔的省市。
 
-成功响应 `200`：
+成功 `data`：
 
 ```json
 {
-  "message": "已结合分数与位次生成冲、稳、保建议。",
+  "message": "已按历史最低位次生成冲、稳、保建议。",
   "recommendations": {
     "冲": [],
     "稳": [
       {
         "category": "稳",
-        "gap": 500,
-        "score_gap": 3,
-        "match_gap": 800,
-        "school": {"id": 2, "name": "福州大学", "province": "福建", "city": "福州", "level": "211", "description": "国家双一流建设高校。"},
-        "major": {"name": "计算机科学与技术", "min_score": 577, "min_rank": 15500},
-        "reason": "历史最低分 577、最低位次 15500；您的分数差 +3 分、位次差 +500 名，综合判定为“稳”。"
+        "gap": 1000,
+        "score_gap": -10,
+        "match_gap": 1000,
+        "school": { "id": 2, "name": "示例院校", "province": "福建", "city": "福州", "level": "211", "description": "示例" },
+        "major": { "name": "软件工程", "min_score": 590, "min_rank": 16000 },
+        "reason": "历史最低分 590、最低位次 16000；您的位次差 +1000 名，按位次判定为“稳”。"
       }
     ],
     "保": []
   },
-  "disclaimer": "推荐基于本地演示数据和少量来源标注的录取记录，仅供参考，不承诺录取结果。"
+  "disclaimer": "推荐基于本地演示数据与规则，仅供参考，不承诺录取结果。"
 }
 ```
 
-`recommendations` 始终包含 `冲`、`稳`、`保` 三个数组。某个数组为空是正常结果；`message` 为“暂无符合条件的数据。”时，三个数组都会为空。
+以上数值仅用于说明格式。`gap = 历史最低位次 - 用户位次`，`gap < -2000` 为冲，`-2000..2000` 为稳，`gap > 2000` 为保。`match_gap` 当前等于 `gap`，分数不参与分类。后端每类按 `abs(gap)` 升序最多取 5 条，前端保留原顺序。记录单位为院校专业组合，不是不同学校数，不应转换为录取概率。
 
-前端可用 `match_gap` 做同一组内排序展示。它是后端综合分数差和位次差的内部匹配值，不应作为真实录取概率展示。
+三个数组全空是正常结果，不是系统错误。当前种子数据覆盖福建物理类，其他生源地/科类可能无数据。推荐响应不含年份，具体历史年份到院校详情中查看，不在结果页推测。
 
-参数不合法时返回 `422`，格式由 FastAPI 标准校验错误决定：
+## 异常处理
 
-```json
-{
-  "detail": [
-    {"type": "greater_than_equal", "loc": ["body", "rank"], "msg": "Input should be greater than or equal to 1", "input": 0}
-  ]
-}
-```
-
-## 5. 智能对话
-
-`POST /chat`
-
-请求体：
-
-```json
-{
-  "message": "我在福建高考，580 分，位次 15000，想学计算机，推荐江浙沪院校。",
-  "context": "希望毕业后在长三角工作",
-  "history": [
-    {"role": "user", "content": "我更在意就业。"},
-    {"role": "assistant", "content": "请提供生源省份、分数和位次。"}
-  ]
-}
-```
-
-| 字段 | 类型 | 必填 | 约束 |
-|---|---:|:---:|---|
-| `message` | string | 是 | 当前消息，1–1000 个字符 |
-| `context` | string/null | 否 | 补充背景，最多 2000 个字符 |
-| `history` | array | 否 | 最多 20 条，仅允许 `user` 与 `assistant` 角色；每条内容最多 4000 个字符 |
-
-前端负责保存 `history` 并随每次请求发送；后端不保存会话。不要把当前 `message` 再放进 `history`。
-
-成功响应：
-
-```json
-{
-  "answer": "先别急着给自己贴‘江浙沪计算机’的标签。位次、专业和地区都要同时匹配，以下建议基于本地记录。",
-  "mode": "llm_agent",
-  "disclaimer": "本地数据包含演示数据与少量来源记录，模型回答仅供参考，不承诺录取结果；请核对院校官方信息。",
-  "tools_used": ["recommend_schools"],
-  "fallback_reason": null
-}
-```
-
-`mode` 决定前端状态：
-
-| `mode` | 含义 | 前端处理 |
-|---|---|---|
-| `llm_agent` | LLM Agent 已正常完成 | 正常展示 `answer` 和 `tools_used` |
-| `rule_based` | LLM 未启用或本轮不可用，已安全降级 | 展示 `answer`，并以非阻塞提示告知基础模式 |
-
-当 `mode=rule_based` 时，读取 `fallback_reason`：
-
-| 值 | 含义 |
+| HTTP 状态 | 小程序行为 |
 |---|---|
-| `disabled` | 后端未启用 LLM |
-| `missing_api_key` | 后端缺少 LLM 密钥 |
-| `invalid_configuration` | LLM 配置无效 |
-| `authentication_failed` | 密钥或供应商认证失败 |
-| `rate_limited` | 供应商限流 |
-| `timeout` / `connection_failed` | 网络或供应商连接问题 |
-| `provider_error` | 供应商服务错误 |
-| `invalid_response` / `incomplete_response` / `empty_response` | 供应商返回无法使用的结果 |
-| `round_limit` | 工具调用超过本轮上限 |
+| 400 | 显示参数校验信息，并保留表单方便修改 |
+| 401 | 业务接口清理本机账号数据、跳转登录；登录接口显示账号或密码错误 |
+| 403 | 显示权限不足，不重复跳转登录 |
+| 404 | 显示院校或服务不存在 |
+| 429 | 提示稍后重试，不自动重发 |
+| 500 / 503 | 显示服务异常，提供重试入口 |
+| 网络错误 / 超时 | 显示连接或超时提示，结束加载状态 |
 
-以上降级仍返回 `200`，因为接口已经给出可展示的基础回答。只有请求体不合法时才返回 `422`。
-
-## 推荐的小程序调用封装
-
-```ts
-import { API_BASE } from "../config/api";
-
-export function request<T>(path: string, method: "GET" | "POST", data?: object): Promise<T> {
-  return new Promise((resolve, reject) => {
-    wx.request({
-      url: `${API_BASE}${path}`,
-      method,
-      data,
-      header: { "content-type": "application/json" },
-      success(response) {
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          resolve(response.data as T);
-          return;
-        }
-        reject({ statusCode: response.statusCode, data: response.data });
-      },
-      fail(error) {
-        reject({ type: "network_error", error });
-      },
-    });
-  });
-}
-
-export const getHealth = () => request<{ status: string }>("/health", "GET");
-export const getSchools = (data?: { keyword?: string; province?: string; limit?: number }) =>
-  request("/schools", "GET", data);
-export const recommend = (data: {
-  province: string; score: number; rank: number;
-  major_preference?: string; region_preference?: string;
-}) => request("/recommend", "POST", data);
-export const chat = (data: { message: string; context?: string; history?: object[] }) =>
-  request("/chat", "POST", data);
-```
-
-页面加载时可请求 `GET /health`；网络异常、非 `2xx` 响应和 `422` 分开处理。对 `/chat` 的 `rule_based` 响应不要按网络错误处理。
+当前前端只使用上述接口，没有调用不存在的注册、微信登录、收藏、档案同步和对话接口。

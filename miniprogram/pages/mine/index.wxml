@@ -1,0 +1,14 @@
+<view class="page tab-page">
+  <view class="eyebrow">MY JOURNEY</view>
+  <view class="account"><view class="avatar">{{loggedIn ? '我' : '远'}}</view><view class="account-copy"><view class="account-name">{{loggedIn ? username : '你好，未来探索者'}}</view><view class="subtitle">每一步，都离理想更近一些。</view></view></view>
+  <button wx:if="{{!loggedIn}}" class="primary" bindtap="login">登录我的账号 ↗</button>
+  <view class="card profile-card section"><view class="section-head"><text class="section-title">我的考生档案</text><button class="text-button" bindtap="plan">{{profile ? '编辑 ↗' : '去完善 ↗'}}</button></view>
+    <block wx:if="{{profile}}"><view class="profile-meta">{{profile.province}} · {{profile.subject_type}}</view><view class="profile-metrics"><view><text>{{profile.score}}</text><view>高考分数</view></view><view><text>{{rankText}}</text><view>全省位次</view></view></view><view class="muted">{{profile.major_preference || '专业不限'}} · {{profile.region_preference || '地区不限'}}</view></block>
+    <view wx:else class="profile-empty">给未来一个起点。填写你的分数和位次，<view>让志愿选择更有方向。</view></view>
+  </view>
+  <view class="card menu section"><button class="menu-row" bindtap="results"><view><text class="menu-icon">◎</text>最近一次推荐</view><text class="menu-note">{{hasResult ? '查看结果' : '尚未生成'}} ›</text></button><button class="menu-row" bindtap="health" disabled="{{checking}}"><view><text class="menu-icon">↗</text>服务连接</view><text class="menu-note">{{checking ? '检查中' : '检查连接'}} ›</text></button><view wx:if="{{healthText}}" class="health-result">{{healthText}}</view><button class="menu-row" bindtap="about"><view><text class="menu-icon">ⓘ</text>关于向远</view><text class="menu-note">›</text></button></view>
+  <view wx:if="{{loggedIn}}" class="section"><view class="section-head"><text class="section-title">账号权限</text><text class="muted">{{loading ? '正在同步…' : '由管理员分配'}}</text></view><view class="permission-list"><view wx:for="{{permissions}}" wx:key="label" class="permission {{item.enabled ? 'enabled' : ''}}">{{item.enabled ? '✓' : '−'}} {{item.label}} · {{item.enabled ? '已开通' : '未开通'}}</view></view></view>
+  <view wx:if="{{error}}" class="error">{{error}}<button class="text-button" bindtap="refresh">重新同步</button></view>
+  <button wx:if="{{loggedIn}}" class="secondary logout" bindtap="logout" loading="{{loggingOut}}" disabled="{{loggingOut}}">退出登录</button>
+  <view class="footnote">向远 · 升学规划<view>认真做选择，从容向未来。</view></view>
+</view>

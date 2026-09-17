@@ -1,0 +1,34 @@
+page { background: #f7f8f2; color: #24372e; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 28rpx; line-height: 1.6; }
+view, text, button, input, textarea, scroll-view { box-sizing: border-box; }
+button { margin: 0; font-size: 28rpx; border-radius: 18rpx; font-weight: 600; }
+button::after { border: 0; }
+button[disabled] { opacity: .5; }
+.page { padding: 32rpx 36rpx 64rpx; }
+.tab-page { padding-bottom: calc(160rpx + env(safe-area-inset-bottom)); }
+.eyebrow { color: #7d897f; font-size: 20rpx; letter-spacing: 4rpx; font-weight: 600; }
+.title { font-size: 46rpx; font-weight: 700; letter-spacing: -1rpx; line-height: 1.3; }
+.subtitle { color: #81897f; font-size: 25rpx; margin-top: 14rpx; }
+.section { margin-top: 44rpx; }
+.section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22rpx; }
+.section-title { font-size: 32rpx; font-weight: 650; }
+.card { background: #fff; border: 1rpx solid #e9ece3; border-radius: 26rpx; padding: 30rpx; }
+.primary { background: #244c3b; color: #fff; padding: 8rpx 24rpx; }
+.secondary { background: #edf1e8; color: #244c3b; padding: 8rpx 24rpx; }
+.text-button { background: transparent; padding: 0; color: #41654a; font-size: 25rpx; line-height: 2; font-weight: 500; }
+.muted { color: #879085; font-size: 24rpx; }
+.row { display: flex; align-items: center; }
+.between { display: flex; align-items: center; justify-content: space-between; }
+.tag { display: inline-block; padding: 5rpx 14rpx; border-radius: 8rpx; background: #eef3e9; color: #58704b; font-size: 21rpx; }
+.notice { font-size: 23rpx; color: #8b8265; background: #f2f0e4; border-radius: 16rpx; padding: 22rpx 26rpx; line-height: 1.8; }
+.error { color: #a64932; background: #fff0e9; border-radius: 14rpx; padding: 20rpx 24rpx; font-size: 25rpx; margin: 24rpx 0; }
+.field { margin-top: 28rpx; }
+.label { display: block; font-size: 26rpx; font-weight: 600; margin-bottom: 14rpx; }
+.input { background: #f7f8f3; border: 1rpx solid #e9ece3; border-radius: 14rpx; height: 90rpx; padding: 0 24rpx; font-size: 28rpx; }
+.picker { display: flex; align-items: center; justify-content: space-between; }
+.placeholder { color: #a0a69d; }
+.divider { height: 1rpx; background: #ecefe6; margin: 26rpx 0; }
+.footnote { color: #959a8f; font-size: 22rpx; text-align: center; margin-top: 38rpx; line-height: 1.8; }
+.badge { background: #ebefe1; color: #4b6244; width: 82rpx; height: 82rpx; border-radius: 22rpx; display: flex; align-items: center; justify-content: center; font-size: 36rpx; font-family: serif; font-weight: bold; flex-shrink: 0; }
+.reach { color: #b27648; background: #f8eee2; }
+.steady { color: #45654d; background: #ebf1e7; }
+.safe { color: #537d86; background: #eaf2f3; }

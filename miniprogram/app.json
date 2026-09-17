@@ -1,0 +1,21 @@
+{
+  "pages": ["pages/home/index", "pages/schools/index", "pages/recommend/index", "pages/mine/index", "pages/login/index", "pages/school-detail/index", "pages/results/index"],
+  "window": { "navigationBarTitleText": "向远 · 升学规划", "navigationBarBackgroundColor": "#f7f8f2", "navigationBarTextStyle": "black", "backgroundColor": "#f7f8f2", "backgroundTextStyle": "dark" },
+  "tabBar": {
+    "custom": true,
+    "color": "#858c82",
+    "selectedColor": "#244c3b",
+    "backgroundColor": "#ffffff",
+    "list": [
+      { "pagePath": "pages/home/index", "text": "首页" },
+      { "pagePath": "pages/schools/index", "text": "院校库" },
+      { "pagePath": "pages/recommend/index", "text": "志愿推荐" },
+      { "pagePath": "pages/mine/index", "text": "我的" }
+    ]
+  },
+  "usingComponents": { "state-card": "/components/state-card/index", "school-card": "/components/school-card/index" },
+  "networkTimeout": { "request": 15000 },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

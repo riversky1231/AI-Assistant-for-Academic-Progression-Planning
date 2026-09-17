@@ -1,0 +1,14 @@
+<view class="page login-page">
+  <view class="logo">远<view class="logo-star">✦</view></view>
+  <text class="eyebrow">A NEW CHAPTER BEGINS</text>
+  <view class="title">你好，未来的自己。</view><view class="subtitle">登录向远，让每一步选择都有方向。</view>
+  <view class="card login-form">
+    <view class="section-title">账号登录</view><view class="muted">使用管理员为你开通的账号</view>
+    <view class="field"><text class="label">账号</text><input class="input" value="{{username}}" data-field="username" bindinput="input" maxlength="50" placeholder="请输入账号" placeholder-class="placeholder" disabled="{{busy}}" /></view>
+    <view class="field"><text class="label">密码</text><view class="password-wrap"><input class="input" value="{{password}}" data-field="password" bindinput="input" password="{{!visible}}" maxlength="100" placeholder="请输入密码" placeholder-class="placeholder" confirm-type="done" bindconfirm="submit" disabled="{{busy}}" /><button class="visibility" bindtap="toggle">{{visible ? '隐藏' : '显示'}}</button></view></view>
+    <view wx:if="{{error}}" class="error">{{error}}</view>
+    <button class="primary submit" bindtap="submit" loading="{{busy}}" disabled="{{busy}}">{{busy ? '正在登录' : '登录，开启探索'}}</button>
+    <view class="help">还没有账号或忘记密码？请联系管理员。</view>
+  </view>
+  <view class="footnote">你的兴趣值得认真对待，<view>你的未来值得好好规划。</view></view>
+</view>

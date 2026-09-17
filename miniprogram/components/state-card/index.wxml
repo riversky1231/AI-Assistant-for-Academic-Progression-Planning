@@ -1,0 +1,6 @@
+<view class="state" role="status">
+  <view class="symbol {{loading ? 'spinner' : ''}}">{{loading ? '' : '· · ·'}}</view>
+  <view class="heading">{{loading ? '正在整理数据' : title}}</view>
+  <view class="description">{{loading ? '请稍等片刻' : description}}</view>
+  <button wx:if="{{!loading && action}}" bindtap="retry">{{action}}</button>
+</view>

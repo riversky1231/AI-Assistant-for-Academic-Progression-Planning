@@ -1,0 +1,20 @@
+<view class="page tab-page">
+  <view class="eyebrow">MAKE YOUR NEXT MOVE</view><view class="title heading">把未来，慢慢想清楚。</view><view class="subtitle">告诉我们你的情况，一起寻找适合的方向。</view>
+  <view class="steps"><view class="step active"><text>01</text> 填写档案</view><view class="step-line"></view><view class="step"><text>02</text> 查看冲稳保</view></view>
+  <view class="card">
+    <view class="section-head"><text class="section-title">我的高考档案</text><text class="tag">必填信息</text></view>
+    <view class="field first"><text class="label">生源省份</text><picker range="{{provinces}}" value="{{provinceIndex}}" bindchange="province" disabled="{{busy}}"><view class="input picker {{!form.province ? 'placeholder' : ''}}">{{form.province || '请选择参加高考的省份'}}<text>⌄</text></view></picker></view>
+    <view class="field"><text class="label">报考科类</text><view class="subjects"><button class="subject {{form.subject_type === '物理类' ? 'selected' : ''}}" data-value="物理类" bindtap="subject">物理类 <text wx:if="{{form.subject_type === '物理类'}}">✓</text></button><button class="subject {{form.subject_type === '历史类' ? 'selected' : ''}}" data-value="历史类" bindtap="subject">历史类 <text wx:if="{{form.subject_type === '历史类'}}">✓</text></button></view></view>
+    <view class="score-row"><view class="field"><text class="label">高考分数</text><view class="unit-input"><input class="input" type="number" value="{{form.score}}" data-field="score" bindinput="input" placeholder="0–750" maxlength="3" disabled="{{busy}}" /><text>分</text></view></view><view class="field"><text class="label">全省位次</text><view class="unit-input"><input class="input" type="number" value="{{form.rank}}" data-field="rank" bindinput="input" placeholder="请输入位次" maxlength="8" disabled="{{busy}}" /><text>名</text></view></view></view>
+    <view class="hint">请填写同科类全省位次，数值越小排名越靠前。</view>
+  </view>
+  <view class="card preference-card"><view class="section-head"><text class="section-title">我更向往的方向</text><text class="muted">选填</text></view>
+    <view class="field first"><text class="label">心仪专业</text><input class="input" value="{{form.major_preference}}" data-field="major_preference" bindinput="input" maxlength="50" placeholder="例如：计算机、软件工程" disabled="{{busy}}" /></view>
+    <view class="field"><text class="label">想去的地区</text><input class="input" value="{{form.region_preference}}" data-field="region_preference" bindinput="input" maxlength="50" placeholder="不限，或填写省市，如江苏、浙江" disabled="{{busy}}" /><view class="chips"><button wx:for="{{regions}}" wx:key="*this" class="chip {{form.region_preference === item || (!form.region_preference && item === '不限') ? 'selected' : ''}}" data-value="{{item}}" bindtap="region" disabled="{{busy}}">{{item}}</button></view></view>
+  </view>
+  <view class="notice section">依据同省份、同科类历史最低位次匹配院校。当前招生数据为本地演示数据，结果仅供参考，不代表录取概率。</view>
+  <view wx:if="{{error}}" class="error">{{error}}</view>
+  <button class="primary submit" bindtap="submit" loading="{{busy}}" disabled="{{busy}}">{{busy ? '正在生成推荐' : (loggedIn ? '查看我的冲稳保推荐  ↗' : '登录并获取推荐  ↗')}}</button>
+  <button wx:if="{{loggedIn}}" class="text-button save" bindtap="save" disabled="{{busy}}">仅保存考生档案</button>
+  <view class="footnote">档案仅保存在本机，退出登录后会清除。</view>
+</view>
