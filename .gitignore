@@ -6,3 +6,7 @@ __pycache__/
 .env.*
 !.env.example
 backend/target/
+
+# Local editor and WeChat DevTools settings
+.vscode/
+miniprogram/project.private.config.json
