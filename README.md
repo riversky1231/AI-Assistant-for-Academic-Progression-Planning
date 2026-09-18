@@ -5,13 +5,15 @@
 - Spring Boot 3 + Java 17
 - MyBatis-Plus + MySQL 8
 - Redis 缓存
-- Redis Token + 数据库 RBAC 登录与权限验证
+- Redis Token + 数据库 RBAC 登录、注册、账号管理与权限验证
 - 学校列表、学校详情、冲稳保推荐
 - Swagger/OpenAPI
 
-包含基于工具调用的 Agent/LLM 问答接口和固定张雪峰视角。原生微信小程序包含首页、院校库、院校详情、志愿推荐、冲稳保结果、我的和账号登录；使用微信开发者工具导入仓库根目录，配置见 [小程序使用说明](miniprogram/README.md)，接口见 [前端接口文档](docs/frontend-api.md)。
+包含基于工具调用的 Agent/LLM 问答接口和固定张雪峰视角。原生微信小程序包含首页、院校库、院校详情、志愿推荐、冲稳保结果、我的和账号登录/注册/找回/微信登录；使用微信开发者工具导入仓库根目录，配置见 [小程序使用说明](miniprogram/README.md)，接口见 [前端接口文档](docs/frontend-api.md)。
 
 后端统一使用 Java，Agent 对话入口为 `/agent/chat`。运行与测试使用 JDK、Maven、Node.js 和 PowerShell。
+
+微信小程序 AppID：`wx8ab1f880d51cff5f`。
 
 ## 1. 初始化环境
 
@@ -70,8 +72,16 @@ satoken: <tokenValue>
 |---|---|---|---|
 | GET | `/health` | 公开 | 健康检查 |
 | POST | `/auth/login` | 公开 | 登录 |
+| POST | `/auth/register` | 公开 | 注册并登录 |
+| POST | `/auth/wechat-login` | 公开 | 小程序微信登录 |
+| POST | `/auth/forgot-password` | 公开 | 用绑定手机号或邮箱找回密码 |
 | POST | `/auth/logout` | 已登录 | 退出 |
 | GET | `/auth/me` | Redis Token | 当前角色和权限 |
+| GET/PUT | `/auth/profile` | 已登录 | 查询或更新账号资料 |
+| POST | `/auth/change-password` | 已登录 | 修改当前账号密码 |
+| GET/POST | `/auth/users` | `account:manage` | 账号列表和创建 |
+| PUT | `/auth/users/{id}` | `account:manage` | 启停或更新账号 |
+| POST | `/auth/users/{id}/reset-password` | `account:manage` | 管理员重置密码 |
 | GET | `/schools` | `school:read` | 学校列表和筛选 |
 | GET | `/schools/{id}` | `school:read` | 学校、专业和录取详情 |
 | POST | `/recommend` | `recommend:use` | 按位次差生成冲稳保 |

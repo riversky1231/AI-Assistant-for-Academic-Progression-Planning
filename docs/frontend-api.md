@@ -14,13 +14,13 @@
 
 `code=0` 表示成功；失败使用相应 HTTP 状态码及 `{ "code": 401, "message": "请先登录", "data": null }`。Java DTO/VO 使用 Jackson `SNAKE_CASE`，即 `subject_type`、`token_value`、`min_rank` 等。`/auth/me` 的 Map 键 `userId` 保持原样。
 
-除登录、健康检查外，业务接口必须携带登录响应指定的请求头，当前是：
+除登录、注册、微信登录、找回密码、健康检查外，业务接口必须携带登录响应指定的请求头，当前是：
 
 ```http
 satoken: <token_value>
 ```
 
-## 1. 登录与账号
+## 1. 用户与账号
 
 ### POST /auth/login
 
@@ -35,11 +35,68 @@ satoken: <token_value>
   "token_name": "satoken",
   "token_value": "服务端随机Token",
   "timeout": 7200,
-  "permissions": ["school:read", "recommend:use"]
+  "permissions": ["school:read", "recommend:use"],
+  "user": {
+    "id": 1,
+    "username": "admin",
+    "nickname": "系统管理员",
+    "phone": null,
+    "email": null,
+    "wechat_bound": false,
+    "enabled": true
+  }
 }
 ```
 
 Token 在 Redis 中保存，每次通过鉴权后延长 2 小时有效期；不要把登录时的 `timeout` 当作不可续期的本地到期时间。错误账号或密码返回 401，同一用户名 5 分钟超过 10 次尝试返回 429。前端不自动重试登录。
+
+### POST /auth/register
+
+公开接口，成功后自动登录并返回同 `/auth/login` 的 Token 结构。账号 3–50 位，只允许字母、数字和下划线；密码 8–100 位；手机号、邮箱、昵称可选。
+
+```json
+{ "username": "student01", "password": "Student@123", "nickname": "小陈", "phone": "13800000000", "email": "student@example.com" }
+```
+
+普通注册账号默认分配 `user` 角色，拥有 `school:read` 和 `recommend:use`。
+
+### POST /auth/wechat-login
+
+公开接口，小程序调用 `wx.login` 后把 `code` 传给后端；当前项目使用演示型稳定 openid 生成逻辑，不调用真实微信服务端换取 openid。
+
+```json
+{ "code": "wx.login 返回的 code", "nickname": "微信用户" }
+```
+
+### POST /auth/forgot-password
+
+公开接口，用已绑定手机号或邮箱校验后重置密码。
+
+```json
+{ "username": "student01", "phone": "13800000000", "email": null, "new_password": "NewPass@123" }
+```
+
+`phone` 与 `email` 至少匹配一项；同一账号 10 分钟最多尝试 5 次。
+
+### GET /auth/profile
+
+已登录。返回当前账号的安全资料，不包含密码哈希。
+
+### PUT /auth/profile
+
+已登录。更新昵称、手机号、邮箱。
+
+```json
+{ "nickname": "小陈", "phone": "13800000000", "email": "student@example.com" }
+```
+
+### POST /auth/change-password
+
+已登录。校验原密码后修改。
+
+```json
+{ "old_password": "OldPass@123", "new_password": "NewPass@123" }
+```
 
 ### GET /auth/me
 
@@ -52,6 +109,17 @@ Token 在 Redis 中保存，每次通过鉴权后延长 2 小时有效期；不�
 ### POST /auth/logout
 
 无需请求体。删除当前 Redis Token，成功 `data=null`。小程序成功后清理 Token、本机考生档案和最近推荐。
+
+### 账号管理接口
+
+以下接口需要登录且拥有 `account:manage` 权限，默认管理员 `admin` 拥有该权限。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/auth/users` | 查询账号列表，响应为 `UserVO[]` |
+| POST | `/auth/users` | 管理员创建账号 |
+| PUT | `/auth/users/{userId}` | 修改昵称、手机号、邮箱、启停状态 |
+| POST | `/auth/users/{userId}/reset-password` | 管理员重置指定账号密码 |
 
 ## 2. 健康检查
 
@@ -157,8 +225,9 @@ Token 在 Redis 中保存，每次通过鉴权后延长 2 小时有效期；不�
 | 401 | 业务接口清理本机账号数据、跳转登录；登录接口显示账号或密码错误 |
 | 403 | 显示权限不足，不重复跳转登录 |
 | 404 | 显示院校或服务不存在 |
+| 409 | 显示账号、手机号或邮箱已存在 |
 | 429 | 提示稍后重试，不自动重发 |
 | 500 / 503 | 显示服务异常，提供重试入口 |
 | 网络错误 / 超时 | 显示连接或超时提示，结束加载状态 |
 
-当前前端只使用上述接口，没有调用不存在的注册、微信登录、收藏、档案同步和对话接口。
+当前前端已使用登录、注册、找回密码、微信登录、资料维护、改密码和管理员账号管理接口；没有调用收藏、档案云同步等接口。

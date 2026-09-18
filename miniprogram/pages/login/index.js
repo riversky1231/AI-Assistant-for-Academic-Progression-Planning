@@ -2,10 +2,23 @@ const api = require('../../services/api');
 const auth = require('../../utils/auth');
 const storage = require('../../utils/storage');
 Page({
-  data: { username: '', password: '', busy: false, error: '', visible: false },
+  data: { mode: 'login', username: '', password: '', newPassword: '', nickname: '', phone: '', email: '', busy: false, error: '', visible: false },
   onLoad(options) { this.next = options.next ? decodeURIComponent(options.next) : '/pages/home/index'; },
   input(event) { this.setData({ [event.currentTarget.dataset.field]: event.detail.value, error: '' }); },
+  mode(event) { this.setData({ mode: event.currentTarget.dataset.mode, error: '' }); },
   toggle() { this.setData({ visible: !this.data.visible }); },
+  saveSession(result, fallbackUsername) {
+    if (!result.token_name || !result.token_value) throw new Error('登录响应不完整，请联系管理员');
+    const user = result.user || {};
+    storage.clear();
+    storage.write('session', {
+      tokenName: result.token_name,
+      tokenValue: result.token_value,
+      username: user.username || fallbackUsername,
+      nickname: user.nickname || '',
+      permissions: result.permissions || []
+    });
+  },
   async submit() {
     if (this.data.busy) return;
     const username = this.data.username.trim();
@@ -14,13 +27,46 @@ Page({
     if (password.length < 8 || password.length > 100) { this.setData({ error: '密码长度应为 8–100 位' }); return; }
     this.setData({ busy: true, error: '' });
     try {
-      const result = await api.login({ username, password });
-      if (!result.token_name || !result.token_value) throw new Error('登录响应不完整，请联系管理员');
-      storage.clear();
-      storage.write('session', { tokenName: result.token_name, tokenValue: result.token_value, username, permissions: result.permissions || [] });
+      const payload = { username, password };
+      if (this.data.mode === 'register') {
+        Object.assign(payload, { nickname: this.data.nickname.trim(), phone: this.data.phone.trim(), email: this.data.email.trim() });
+      }
+      const result = this.data.mode === 'register' ? await api.register(payload) : await api.login(payload);
+      this.saveSession(result, username);
       this.setData({ password: '' });
       auth.finishLogin(this.next);
     } catch (error) { this.setData({ error: error.message }); }
     finally { this.setData({ busy: false }); }
+  },
+  async forgot() {
+    if (this.data.busy) return;
+    const username = this.data.username.trim();
+    const newPassword = this.data.newPassword;
+    if (!username) { this.setData({ error: '请输入需要找回的账号' }); return; }
+    if (!this.data.phone.trim() && !this.data.email.trim()) { this.setData({ error: '请输入绑定手机号或邮箱' }); return; }
+    if (newPassword.length < 8 || newPassword.length > 100) { this.setData({ error: '新密码长度应为 8–100 位' }); return; }
+    this.setData({ busy: true, error: '' });
+    try {
+      await api.forgotPassword({ username, phone: this.data.phone.trim(), email: this.data.email.trim(), new_password: newPassword });
+      wx.showToast({ title: '密码已重置', icon: 'success' });
+      this.setData({ mode: 'login', password: '', newPassword: '' });
+    } catch (error) { this.setData({ error: error.message }); }
+    finally { this.setData({ busy: false }); }
+  },
+  async wechat() {
+    if (this.data.busy) return;
+    this.setData({ busy: true, error: '' });
+    wx.login({
+      success: async result => {
+        try {
+          if (!result.code) throw new Error('微信登录失败，请重试');
+          const login = await api.wechatLogin({ code: result.code, nickname: this.data.nickname.trim() });
+          this.saveSession(login, '微信用户');
+          auth.finishLogin(this.next);
+        } catch (error) { this.setData({ error: error.message }); }
+        finally { this.setData({ busy: false }); }
+      },
+      fail: () => this.setData({ busy: false, error: '微信登录失败，请稍后重试' })
+    });
   }
 });

@@ -164,18 +164,24 @@ ON DUPLICATE KEY UPDATE
     min_score = VALUES(min_score),
     min_rank = VALUES(min_rank);
 
-INSERT INTO sys_user (id, username, password_hash, enabled) VALUES
-    (1, 'admin', 'pbkdf2_sha256$120000$2IS1AXELLN4mCwn9TmRCgA==$ahceD1SndLoDTO6DCJc/ELoqocUk/6EQ1TEWjyr5Ww0=', TRUE)
-ON DUPLICATE KEY UPDATE enabled = VALUES(enabled);
+INSERT INTO sys_user (id, username, password_hash, nickname, enabled) VALUES
+    (1, 'admin', 'pbkdf2_sha256$120000$2IS1AXELLN4mCwn9TmRCgA==$ahceD1SndLoDTO6DCJc/ELoqocUk/6EQ1TEWjyr5Ww0=', '系统管理员', TRUE)
+ON DUPLICATE KEY UPDATE
+    nickname = VALUES(nickname),
+    enabled = VALUES(enabled);
 
 INSERT INTO sys_role (id, role_code, role_name) VALUES
-    (1, 'admin', '管理员')
+    (1, 'admin', '管理员'),
+    (2, 'user', '普通用户')
 ON DUPLICATE KEY UPDATE role_name = VALUES(role_name);
 
 INSERT INTO sys_permission (id, permission_code, permission_name) VALUES
     (1, 'school:read', '查看院校数据'),
-    (2, 'recommend:use', '使用冲稳保推荐')
+    (2, 'recommend:use', '使用冲稳保推荐'),
+    (3, 'account:manage', '管理用户账号')
 ON DUPLICATE KEY UPDATE permission_name = VALUES(permission_name);
 
 INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (1, 1);
-INSERT IGNORE INTO sys_role_permission (role_id, permission_id) VALUES (1, 1), (1, 2);
+INSERT IGNORE INTO sys_role_permission (role_id, permission_id) VALUES
+    (1, 1), (1, 2), (1, 3),
+    (2, 1), (2, 2);

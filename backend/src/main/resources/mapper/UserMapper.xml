@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academic.planning.mapper.UserMapper">
+    <insert id="insertRoleByCode">
+        INSERT IGNORE INTO sys_user_role (user_id, role_id)
+        SELECT #{userId}, id
+        FROM sys_role
+        WHERE role_code = #{roleCode}
+    </insert>
+</mapper>

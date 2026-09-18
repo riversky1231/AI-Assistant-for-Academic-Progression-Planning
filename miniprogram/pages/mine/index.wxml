@@ -2,12 +2,34 @@
   <view class="eyebrow">MY JOURNEY</view>
   <view class="account"><view class="avatar">{{loggedIn ? '我' : '远'}}</view><view class="account-copy"><view class="account-name">{{loggedIn ? username : '你好，未来探索者'}}</view><view class="subtitle">每一步，都离理想更近一些。</view></view></view>
   <button wx:if="{{!loggedIn}}" class="primary" bindtap="login">登录我的账号 ↗</button>
+  <view wx:if="{{loggedIn}}" class="card section account-card">
+    <view class="section-head"><text class="section-title">账号资料</text><text class="muted">{{account && account.wechat_bound ? '已绑定微信' : '未绑定微信'}}</text></view>
+    <view class="field"><text class="label">昵称</text><input class="input" value="{{accountForm.nickname}}" data-group="accountForm" data-field="nickname" bindinput="input" maxlength="50" placeholder="填写昵称" /></view>
+    <view class="field"><text class="label">手机号</text><input class="input" value="{{accountForm.phone}}" data-group="accountForm" data-field="phone" bindinput="input" maxlength="11" type="number" placeholder="用于找回密码" /></view>
+    <view class="field"><text class="label">邮箱</text><input class="input" value="{{accountForm.email}}" data-group="accountForm" data-field="email" bindinput="input" maxlength="100" placeholder="用于找回密码" /></view>
+    <button class="secondary compact" bindtap="saveAccount" loading="{{savingAccount}}" disabled="{{savingAccount}}">保存资料</button>
+  </view>
+  <view wx:if="{{loggedIn}}" class="card section account-card">
+    <view class="section-title">修改密码</view>
+    <view class="field"><text class="label">原密码</text><input class="input" value="{{passwordForm.oldPassword}}" data-group="passwordForm" data-field="oldPassword" bindinput="input" password="true" maxlength="100" placeholder="请输入原密码" /></view>
+    <view class="field"><text class="label">新密码</text><input class="input" value="{{passwordForm.newPassword}}" data-group="passwordForm" data-field="newPassword" bindinput="input" password="true" maxlength="100" placeholder="至少 8 位" /></view>
+    <button class="secondary compact" bindtap="changePassword" loading="{{changingPassword}}" disabled="{{changingPassword}}">修改密码</button>
+  </view>
   <view class="card profile-card section"><view class="section-head"><text class="section-title">我的考生档案</text><button class="text-button" bindtap="plan">{{profile ? '编辑 ↗' : '去完善 ↗'}}</button></view>
     <block wx:if="{{profile}}"><view class="profile-meta">{{profile.province}} · {{profile.subject_type}}</view><view class="profile-metrics"><view><text>{{profile.score}}</text><view>高考分数</view></view><view><text>{{rankText}}</text><view>全省位次</view></view></view><view class="muted">{{profile.major_preference || '专业不限'}} · {{profile.region_preference || '地区不限'}}</view></block>
     <view wx:else class="profile-empty">给未来一个起点。填写你的分数和位次，<view>让志愿选择更有方向。</view></view>
   </view>
   <view class="card menu section"><button class="menu-row" bindtap="results"><view><text class="menu-icon">◎</text>最近一次推荐</view><text class="menu-note">{{hasResult ? '查看结果' : '尚未生成'}} ›</text></button><button class="menu-row" bindtap="health" disabled="{{checking}}"><view><text class="menu-icon">↗</text>服务连接</view><text class="menu-note">{{checking ? '检查中' : '检查连接'}} ›</text></button><view wx:if="{{healthText}}" class="health-result">{{healthText}}</view><button class="menu-row" bindtap="about"><view><text class="menu-icon">ⓘ</text>关于向远</view><text class="menu-note">›</text></button></view>
   <view wx:if="{{loggedIn}}" class="section"><view class="section-head"><text class="section-title">账号权限</text><text class="muted">{{loading ? '正在同步…' : '由管理员分配'}}</text></view><view class="permission-list"><view wx:for="{{permissions}}" wx:key="label" class="permission {{item.enabled ? 'enabled' : ''}}">{{item.enabled ? '✓' : '−'}} {{item.label}} · {{item.enabled ? '已开通' : '未开通'}}</view></view></view>
+  <view wx:if="{{loggedIn && roles.indexOf('admin') >= 0}}" class="card section account-card">
+    <view class="section-head"><text class="section-title">账号管理</text><button class="text-button" bindtap="loadUsers">{{usersOpen ? '刷新' : '展开'}}</button></view>
+    <view wx:if="{{usersOpen}}" class="user-list">
+      <view wx:for="{{users}}" wx:key="id" class="user-row">
+        <view><view class="user-name">{{item.nickname || item.username}}</view><view class="muted">{{item.username}} · {{item.enabled ? '启用' : '停用'}}</view></view>
+        <view class="user-actions"><button class="text-button" data-index="{{index}}" bindtap="toggleUser">{{item.enabled ? '停用' : '启用'}}</button><button class="text-button" data-index="{{index}}" bindtap="resetUser">重置密码</button></view>
+      </view>
+    </view>
+  </view>
   <view wx:if="{{error}}" class="error">{{error}}<button class="text-button" bindtap="refresh">重新同步</button></view>
   <button wx:if="{{loggedIn}}" class="secondary logout" bindtap="logout" loading="{{loggingOut}}" disabled="{{loggingOut}}">退出登录</button>
   <view class="footnote">向远 · 升学规划<view>认真做选择，从容向未来。</view></view>
