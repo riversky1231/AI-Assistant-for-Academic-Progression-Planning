@@ -7,16 +7,20 @@
 .title { margin-top: 18rpx; font-size: 48rpx; letter-spacing: -1rpx; }
 .login-form { margin-top: 40rpx; padding: 30rpx; box-shadow: 0 14rpx 34rpx rgba(40, 65, 48, .05); }
 .login-form .muted { margin-top: 8rpx; }
-.mode-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8rpx; margin-bottom: 30rpx; background: #edf0e7; padding: 7rpx; border-radius: 16rpx; }
+.mode-tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8rpx; margin-bottom: 30rpx; background: #edf0e7; padding: 7rpx; border-radius: 16rpx; }
 .mode-tabs button { width: 100%; min-width: 0; overflow: hidden; white-space: nowrap; background: transparent; color: #78836d; font-size: 23rpx; line-height: 62rpx; padding: 0; text-align: center; }
 .mode-tabs button.active { background: #ffffff; color: #244c3b; font-weight: 600; box-shadow: 0 8rpx 24rpx rgba(36, 76, 59, 0.08); }
 .field { margin-top: 24rpx; }
 .label { color: #385342; }
 .password-wrap { position: relative; }
 .password-wrap .input { padding-right: 105rpx; }
-.visibility { position: absolute; top: 15rpx; right: 14rpx; width: 82rpx; height: 60rpx; display: flex; align-items: center; justify-content: center; background: transparent; color: #6c7d63; font-size: 23rpx; line-height: 1; padding: 0; text-align: center; }
+.eye-toggle { position: absolute; top: 15rpx; right: 14rpx; width: 82rpx; height: 60rpx; display: flex; align-items: center; justify-content: center; background: transparent; padding: 0; }
+.eye-icon { width: 38rpx; height: 24rpx; border: 3rpx solid #6c7d63; border-radius: 80% 20%; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; }
+.eye-pupil { width: 9rpx; height: 9rpx; border-radius: 50%; background: #6c7d63; transform: rotate(-45deg); }
+.eye-icon.is-visible { border-color: #244c3b; }.eye-icon.is-visible .eye-pupil { background: #244c3b; }
 .submit, .wx-login { width: 100%; text-align: center; }
 .submit { margin-top: 32rpx; box-shadow: 0 10rpx 18rpx rgba(36, 76, 59, .12); }
 .wx-login { margin-top: 18rpx; }
+.forgot-link { width: 100%; margin-top: 12rpx; background: transparent; color: #6c7d63; font-size: 24rpx; text-align: center; }.forgot-link::after { border: 0; }
 .help { color: #8e9588; font-size: 22rpx; margin-top: 22rpx; text-align: center; }
 .help-dot { color: #aeb77e; margin-right: 6rpx; }
