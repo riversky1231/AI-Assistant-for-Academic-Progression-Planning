@@ -27,7 +27,7 @@
 
 档案与最近推荐只保存在微信本地存储，没有新增后端接口。退出、切换账号、登录失效均清除这些数据。后台请求携带必要的考生信息；前端不缓存密码、不包含服务端密钥。最近推荐是已生成的快照，修改档案后须重新查询才会更新。
 
-当前 Java 后端只有账号密码登录，未实现微信一键登录、注册、会话对话、收藏、云端档案，因此没有添加这些入口。Python Agent 文件仍在仓库中，但当前 Java 服务没有 `/chat` 路由。
+当前 Java 后端支持账号密码登录及 `/agent/chat` 多轮咨询；小程序暂未添加对话页面。微信一键登录、注册、收藏和云端档案尚未实现。Agent 接口见 [接口文档](../docs/Agent接口文档.md)。
 
 ## 推荐展示规则
 
@@ -39,7 +39,7 @@
 
 ```powershell
 node --test tests/miniprogram.test.cjs
-python tests/check_miniprogram_markup.py
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/check_miniprogram_markup.ps1
 ```
 
 Node 测试通过模拟 `wx` 验证真实接口契约、鉴权、异常、请求竞态、表单边界、页面数据流与页面注册；不访问真实后端，不代表微信运行时渲染验收。

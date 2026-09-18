@@ -1,6 +1,6 @@
 # 微信小程序接口契约（当前 Java 后端）
 
-以 `backend/src/main/java/com/academic/planning/controller`、DTO、VO 和 `application.yml` 为准。旧版 Python API 的 8000 端口、裸数组响应、`/chat` 和综合分数推荐规则不适用于当前服务。
+以 `backend/src/main/java/com/academic/planning/controller`、DTO、VO 和 `application.yml` 为准。服务默认端口为 8080，统一返回 `{code, message, data}`；Agent 使用 `/agent/chat`，推荐分类按位次差计算。
 
 默认服务地址：`http://127.0.0.1:8080`。Swagger：`/swagger-ui.html`，OpenAPI：`/v3/api-docs`。小程序导入、环境域名与测试见 [使用说明](../miniprogram/README.md)。
 

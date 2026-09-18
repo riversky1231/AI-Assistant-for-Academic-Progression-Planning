@@ -11,7 +11,7 @@
 
 包含基于工具调用的 Agent/LLM 问答接口和固定张雪峰视角。原生微信小程序包含首页、院校库、院校详情、志愿推荐、冲稳保结果、我的和账号登录；使用微信开发者工具导入仓库根目录，配置见 [小程序使用说明](miniprogram/README.md)，接口见 [前端接口文档](docs/frontend-api.md)。
 
-早期 Python/FastAPI 实现仍保留，历史说明见 [Python 后端与 Agent 文档](docs/python-backend-legacy.md)。Java 的 `/agent/chat` 与 Python 的 `/chat` 请求响应不同，请按所启动的后端选择接口文档。
+后端统一使用 Java，Agent 对话入口为 `/agent/chat`。运行与测试使用 JDK、Maven、Node.js 和 PowerShell。
 
 ## 1. 初始化环境
 
@@ -48,7 +48,7 @@ Swagger：`http://127.0.0.1:8080/swagger-ui.html`
 
 ```powershell
 node --test tests/miniprogram.test.cjs
-python tests/check_miniprogram_markup.py
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/check_miniprogram_markup.ps1
 ```
 
 演示账号：
