@@ -12,11 +12,12 @@
 .mode-tabs button.active { background: #ffffff; color: #244c3b; font-weight: 600; box-shadow: 0 8rpx 24rpx rgba(36, 76, 59, 0.08); }
 .field { margin-top: 24rpx; }
 .label { color: #385342; }
-.password-wrap { position: relative; }
-.password-wrap .input { padding-right: 105rpx; }
-.eye-toggle { position: absolute; top: 15rpx; right: 14rpx; width: 82rpx; height: 60rpx; display: flex; align-items: center; justify-content: center; background: transparent; padding: 0; }
-.eye-icon { width: 38rpx; height: 24rpx; border: 3rpx solid #6c7d63; border-radius: 80% 20%; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; }
-.eye-pupil { width: 9rpx; height: 9rpx; border-radius: 50%; background: #6c7d63; transform: rotate(-45deg); }
+.password-wrap { position: relative; width: 100%; }
+.password-wrap .input { padding-right: 102rpx; }
+/* Native input padding increases its visible width, so offset the control to its actual right edge. */
+.eye-toggle { position: absolute; top: 0; right: -132rpx; width: 86rpx; height: 90rpx; display: flex; align-items: center; justify-content: center; background: transparent; padding: 0; }
+.eye-icon { width: 34rpx; height: 20rpx; border: 2rpx solid #93a18c; border-radius: 76% 24%; transform: rotate(25deg); display: flex; align-items: center; justify-content: center; }
+.eye-pupil { width: 8rpx; height: 8rpx; border-radius: 50%; background: #93a18c; transform: rotate(-25deg); }
 .eye-icon.is-visible { border-color: #244c3b; }.eye-icon.is-visible .eye-pupil { background: #244c3b; }
 .submit, .wx-login { width: 100%; text-align: center; }
 .submit { margin-top: 32rpx; box-shadow: 0 10rpx 18rpx rgba(36, 76, 59, .12); }

@@ -29,7 +29,7 @@ const validForm = () => ({ province: '福建', subject_type: '物理类', score:
 function page(name) {
   let definition;
   const file = path.join(root, 'pages', name, 'index.js');
-  vm.runInNewContext(fs.readFileSync(file, 'utf8'), { Page: value => { definition = value; }, require: dependency => require(path.resolve(path.dirname(file), dependency)), wx: global.wx, getCurrentPages: global.getCurrentPages });
+  vm.runInNewContext(fs.readFileSync(file, 'utf8'), { Page: value => { definition = value; }, require: dependency => require(path.resolve(path.dirname(file), dependency)), wx: global.wx, getCurrentPages: global.getCurrentPages, setTimeout: (...args) => global.setTimeout(...args) });
   definition.data = structuredClone(definition.data);
   definition.setData = function (values) {
     for (const [key, value] of Object.entries(values)) {
@@ -79,6 +79,29 @@ test('invalid credentials and throttling remain on the login page', async () => 
   let promise = api.login({}); respond(0, { code: 401 }, 401); await assert.rejects(promise, /用户名或密码错误/);
   promise = api.login({}); respond(1, { code: 429 }, 429); await assert.rejects(promise, /频繁/);
   assert.equal(navigation.length, 0);
+});
+test('registration submits the complete registration payload and starts a session', async () => {
+  const login = page('login'); login.onLoad({});
+  login.setData({ mode: 'register', username: 'new_student', password: 'password88', nickname: '小远', phone: '13800138000', email: 'new@example.com' });
+  const submitting = login.submit();
+  assert.equal(requests[0].url.endsWith('/auth/register'), true);
+  assert.equal(JSON.stringify(requests[0].data), JSON.stringify({ username: 'new_student', password: 'password88', nickname: '小远', phone: '13800138000', email: 'new@example.com' }));
+  respond(0, { code: 0, data: { token_name: 'satoken', token_value: 'registered-token', user: { username: 'new_student' } } });
+  await submitting;
+  assert.equal(auth.session().tokenValue, 'registered-token');
+  assert.equal(navigation.at(-1), '/pages/home/index');
+});
+test('password recovery sends the server request and returns to login on success', async () => {
+  const forgot = page('forgot'); forgot.onLoad({ next: encodeURIComponent('/pages/schools/index') });
+  forgot.setData({ username: 'student', email: 'student@example.com', newPassword: 'password99', confirmPassword: 'password99' });
+  const originalSetTimeout = global.setTimeout; global.setTimeout = callback => callback();
+  try {
+    const submitting = forgot.submit();
+    assert.equal(requests[0].url.endsWith('/auth/forgot-password'), true);
+    assert.equal(JSON.stringify(requests[0].data), JSON.stringify({ username: 'student', phone: '', email: 'student@example.com', new_password: 'password99' }));
+    respond(0, { code: 0, data: null }); await submitting;
+    assert.equal(navigation.at(-1), '/pages/login/index?next=' + encodeURIComponent('/pages/schools/index'));
+  } finally { global.setTimeout = originalSetTimeout; }
 });
 test('network timeout and unexpected success body reject instead of showing false results', async () => {
   let promise = api.health(); requests[0].fail({ errMsg: 'request:fail timeout' }); await assert.rejects(promise, /超时/);

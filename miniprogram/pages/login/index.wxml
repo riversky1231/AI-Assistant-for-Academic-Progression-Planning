@@ -12,9 +12,9 @@
     <view class="field"><text class="label">密码</text><view class="password-wrap"><input class="input" value="{{password}}" data-field="password" bindinput="input" password="{{!visible}}" maxlength="100" placeholder="请输入密码" placeholder-class="placeholder" confirm-type="done" bindconfirm="submit" disabled="{{busy}}" /><button class="eye-toggle" bindtap="toggle" aria-label="{{visible ? '隐藏密码' : '显示密码'}}"><view class="eye-icon {{visible ? 'is-visible' : ''}}"><view class="eye-pupil"></view></view></button></view></view>
     <view wx:if="{{error}}" class="error">{{error}}</view>
     <button class="primary submit" bindtap="submit" loading="{{busy}}" disabled="{{busy}}">{{busy ? '处理中' : mode === 'register' ? '注册并登录' : '登录'}}</button>
-    <button class="secondary wx-login" bindtap="wechat" loading="{{busy}}" disabled="{{busy}}">微信一键登录</button>
-    <button class="forgot-link" bindtap="goForgot" disabled="{{busy}}">找回密码</button>
-    <view class="help"><text class="help-dot">✦</text> 注册后默认开通院校查询和志愿推荐</view>
+    <button wx:if="{{mode === 'login'}}" class="secondary wx-login" bindtap="wechat" loading="{{busy}}" disabled="{{busy}}">微信一键登录</button>
+    <button wx:if="{{mode === 'login'}}" class="forgot-link" bindtap="goForgot" disabled="{{busy}}">找回密码</button>
+    <view class="help"><text class="help-dot">✦</text> {{mode === 'register' ? '注册后默认开通院校查询和志愿推荐' : '使用账号密码或微信快捷登录'}}</view>
   </view>
   <view class="footnote">你的兴趣值得认真对待，<view>你的未来值得好好规划。</view></view>
 </view>

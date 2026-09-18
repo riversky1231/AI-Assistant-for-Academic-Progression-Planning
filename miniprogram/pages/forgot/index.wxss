@@ -8,7 +8,8 @@
 .recovery-form { margin-top: 40rpx; padding: 30rpx; box-shadow: 0 14rpx 34rpx rgba(40, 65, 48, .05); }
 .field { margin-top: 24rpx; }.label { color: #385342; }.input { width: 100%; }
 .compact-field { margin-top: 0; }.or-divider { display: flex; align-items: center; gap: 16rpx; color: #9aa294; font-size: 22rpx; margin-top: 24rpx; }.or-divider::before, .or-divider::after { content: ''; height: 1rpx; background: #e9ece3; flex: 1; }
-.password-wrap { position: relative; }.password-wrap .input { padding-right: 105rpx; }
-.eye-toggle { position: absolute; top: 15rpx; right: 14rpx; width: 82rpx; height: 60rpx; display: flex; align-items: center; justify-content: center; background: transparent; padding: 0; }
-.eye-icon { width: 38rpx; height: 24rpx; border: 3rpx solid #6c7d63; border-radius: 80% 20%; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; }.eye-pupil { width: 9rpx; height: 9rpx; border-radius: 50%; background: #6c7d63; transform: rotate(-45deg); }.eye-icon.is-visible { border-color: #244c3b; }.eye-icon.is-visible .eye-pupil { background: #244c3b; }
+.password-wrap { position: relative; width: 100%; }.password-wrap .input { padding-right: 102rpx; }
+/* Keep the password visibility control aligned with the input's visible right edge. */
+.eye-toggle { position: absolute; top: 0; right: -132rpx; width: 86rpx; height: 90rpx; display: flex; align-items: center; justify-content: center; background: transparent; padding: 0; }
+.eye-icon { width: 34rpx; height: 20rpx; border: 2rpx solid #93a18c; border-radius: 76% 24%; transform: rotate(25deg); display: flex; align-items: center; justify-content: center; }.eye-pupil { width: 8rpx; height: 8rpx; border-radius: 50%; background: #93a18c; transform: rotate(-25deg); }.eye-icon.is-visible { border-color: #244c3b; }.eye-icon.is-visible .eye-pupil { background: #244c3b; }
 .submit { width: 100%; margin-top: 32rpx; text-align: center; box-shadow: 0 10rpx 18rpx rgba(36, 76, 59, .12); }.back-link { width: 100%; margin-top: 16rpx; background: transparent; color: #6c7d63; font-size: 24rpx; text-align: center; }.back-link::after { border: 0; }.footnote { margin-top: 38rpx; }

@@ -5,7 +5,11 @@ Page({
   data: { mode: 'login', username: '', password: '', nickname: '', phone: '', email: '', busy: false, error: '', visible: false },
   onLoad(options) { this.next = options.next ? decodeURIComponent(options.next) : '/pages/home/index'; },
   input(event) { this.setData({ [event.currentTarget.dataset.field]: event.detail.value, error: '' }); },
-  mode(event) { this.setData({ mode: event.currentTarget.dataset.mode, error: '' }); },
+  mode(event) {
+    const mode = event.currentTarget.dataset.mode;
+    if (mode !== 'login' && mode !== 'register') return;
+    this.setData({ mode, error: '', visible: false });
+  },
   toggle() { this.setData({ visible: !this.data.visible }); },
   goForgot() { wx.navigateTo({ url: `/pages/forgot/index?next=${encodeURIComponent(this.next)}` }); },
   saveSession(result, fallbackUsername) {
