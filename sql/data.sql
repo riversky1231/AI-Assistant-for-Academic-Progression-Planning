@@ -1,4 +1,4 @@
-INSERT INTO school (id, name, province, city, level, description) VALUES
+INSERT IGNORE INTO school (id, name, province, city, level, description) VALUES
     (1, '厦门大学', '福建', '厦门', '985', '综合性研究型大学。'),
     (2, '福州大学', '福建', '福州', '211', '国家双一流建设高校。'),
     (3, '华侨大学', '福建', '泉州', '省重点', '面向海内外学生的综合性大学。'),
@@ -29,7 +29,7 @@ CROSS JOIN (
     UNION ALL SELECT '人工智能', '学习机器学习、数据分析与智能系统基础。'
 ) templates
 -- End the SELECT explicitly so ON is not parsed as a JOIN condition.
-WHERE 1 = 1
+WHERE TRUE
 ON DUPLICATE KEY UPDATE
     category = VALUES(category),
     description = VALUES(description);
@@ -73,6 +73,7 @@ FROM (
     FROM school s
     JOIN major m ON m.school_id = s.id
 ) ranked
+WHERE TRUE
 ON DUPLICATE KEY UPDATE
     min_score = VALUES(min_score),
     min_rank = VALUES(min_rank);
@@ -158,6 +159,7 @@ FROM (
         UNION ALL SELECT '历史类'
     ) subjects
 ) ranked
+WHERE TRUE
 ON DUPLICATE KEY UPDATE
     min_score = VALUES(min_score),
     min_rank = VALUES(min_rank);

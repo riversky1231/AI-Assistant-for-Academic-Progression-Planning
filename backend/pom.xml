@@ -56,6 +56,20 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>skills</directory>
+                <targetPath>skills</targetPath>
+                <includes>
+                    <include>**/*.md</include>
+                    <include>**/*.json</include>
+                    <include>**/LICENSE</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

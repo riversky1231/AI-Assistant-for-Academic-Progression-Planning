@@ -12,7 +12,7 @@ from .models import ChatRequest, RecommendationRequest
 
 
 PROJECT_SKILL_ROOT = Path(__file__).resolve().parent / "skills" / "zhangxuefeng-skill"
-PROJECT_SKILL_PATH = PROJECT_SKILL_ROOT / "SKILL.md"
+PROJECT_SKILL_PATH = PROJECT_SKILL_ROOT / "UPSTREAM-SKILL.md"
 PROJECT_SKILL_RESOURCE_FILES = (
     *sorted((PROJECT_SKILL_ROOT / "references" / "research").glob("*.md")),
     *sorted((PROJECT_SKILL_ROOT / "examples").glob("*.md")),
@@ -20,7 +20,7 @@ PROJECT_SKILL_RESOURCE_FILES = (
 
 
 def load_zhangxuefeng_skill() -> str:
-    """Load the bundled SKILL.md byte-for-byte as the agent's base instruction."""
+    """Load the original skill; the Java runtime uses its separate adapted SKILL.md."""
     return PROJECT_SKILL_PATH.read_text(encoding="utf-8")
 
 
@@ -45,7 +45,7 @@ PROJECT_CONTRACT = """你正在“升学规划智能助手”项目中运行。
 """
 
 SKILL_RUNTIME_CONTRACT = """\
-The bundled SKILL.md above is the original, unchanged skill instruction. Its research
+The bundled UPSTREAM-SKILL.md above is the original, unchanged skill instruction. Its research
 notes and example conversation are available through read_skill_resource; read only
 the resource that materially helps the current answer. This runtime has no WebSearch,
 browser, shell, or git tool. Never claim to have completed a capability that is not

@@ -35,6 +35,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ApiResponse.error(400, exception.getMessage()));
     }
 
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMalformedBody() {
+        return ResponseEntity.badRequest().body(ApiResponse.error(400, "请求 JSON 格式或字段类型不合法"));
+    }
+
     @ExceptionHandler(AuthException.class)
     public ResponseEntity<ApiResponse<Void>> handleAuth(AuthException exception) {
         return ResponseEntity.status(exception.getStatus())

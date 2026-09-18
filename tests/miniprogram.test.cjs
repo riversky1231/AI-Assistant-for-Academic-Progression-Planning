@@ -43,7 +43,7 @@ function page(name) {
 
 test('school queries use the Java envelope, satoken and only nonempty filters', async () => {
   account(); const promise = api.schools({ keyword: ' 福州 ', province: '' });
-  assert.equal(requests[0].url, 'http://127.0.0.1:8080/schools');
+  assert.equal(requests[0].url, require('../miniprogram/config/api').getBaseUrl() + '/schools');
   assert.equal(requests[0].header.satoken, 'test-token');
   assert.deepEqual(requests[0].data, { limit: 50, keyword: '福州' });
   respond(0, { code: 0, data: [{ id: 2, name: '福州大学' }] });
