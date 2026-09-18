@@ -3,19 +3,25 @@
 .logo { width: 100rpx; height: 100rpx; background: #244c3b; border-radius: 28rpx; color: #e6edc8; font-family: serif; font-size: 54rpx; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: 0 16rpx 28rpx rgba(36, 76, 59, .14); }
 .logo-star { position: absolute; right: -14rpx; top: -22rpx; color: #b6bd8b; font-size: 44rpx; }
 .brand-caption { color: #6f806b; font-size: 24rpx; letter-spacing: 2rpx; }
+.login-page > .eyebrow, .login-page > .title, .login-page > .subtitle { display: block; text-align: center; }
 .title { margin-top: 18rpx; font-size: 48rpx; letter-spacing: -1rpx; }
 .login-form { margin-top: 40rpx; padding: 30rpx; box-shadow: 0 14rpx 34rpx rgba(40, 65, 48, .05); }
 .login-form .muted { margin-top: 8rpx; }
-.mode-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8rpx; margin-bottom: 30rpx; background: #edf0e7; padding: 7rpx; border-radius: 16rpx; }
-.mode-tabs button { overflow: hidden; white-space: nowrap; background: transparent; color: #78836d; font-size: 23rpx; line-height: 62rpx; padding: 0 5rpx; }
+.mode-tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8rpx; margin-bottom: 30rpx; background: #edf0e7; padding: 7rpx; border-radius: 16rpx; }
+.mode-tabs button { width: 100%; min-width: 0; overflow: hidden; white-space: nowrap; background: transparent; color: #78836d; font-size: 23rpx; line-height: 62rpx; padding: 0; text-align: center; }
 .mode-tabs button.active { background: #ffffff; color: #244c3b; font-weight: 600; box-shadow: 0 8rpx 24rpx rgba(36, 76, 59, 0.08); }
-.form-heading { padding: 2rpx 4rpx 2rpx; border-left: 6rpx solid #b6bd8b; padding-left: 18rpx; }
 .field { margin-top: 24rpx; }
 .label { color: #385342; }
-.password-wrap { position: relative; }
-.password-wrap .input { padding-right: 105rpx; }
-.visibility { position: absolute; top: 15rpx; right: 14rpx; background: transparent; color: #6c7d63; font-size: 23rpx; line-height: 60rpx; padding: 0 12rpx; }
+.password-wrap { position: relative; width: 100%; }
+.password-wrap .input { padding-right: 102rpx; }
+/* Native input padding increases its visible width, so offset the control to its actual right edge. */
+.eye-toggle { position: absolute; top: 0; right: -132rpx; width: 86rpx; height: 90rpx; display: flex; align-items: center; justify-content: center; background: transparent; padding: 0; }
+.eye-icon { width: 34rpx; height: 20rpx; border: 2rpx solid #93a18c; border-radius: 76% 24%; transform: rotate(25deg); display: flex; align-items: center; justify-content: center; }
+.eye-pupil { width: 8rpx; height: 8rpx; border-radius: 50%; background: #93a18c; transform: rotate(-25deg); }
+.eye-icon.is-visible { border-color: #244c3b; }.eye-icon.is-visible .eye-pupil { background: #244c3b; }
+.submit, .wx-login { width: 100%; text-align: center; }
 .submit { margin-top: 32rpx; box-shadow: 0 10rpx 18rpx rgba(36, 76, 59, .12); }
 .wx-login { margin-top: 18rpx; }
+.forgot-link { width: 100%; margin-top: 12rpx; background: transparent; color: #6c7d63; font-size: 24rpx; text-align: center; }.forgot-link::after { border: 0; }
 .help { color: #8e9588; font-size: 22rpx; margin-top: 22rpx; text-align: center; }
 .help-dot { color: #aeb77e; margin-right: 6rpx; }

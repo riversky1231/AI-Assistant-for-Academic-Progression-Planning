@@ -2,11 +2,16 @@ const api = require('../../services/api');
 const auth = require('../../utils/auth');
 const storage = require('../../utils/storage');
 Page({
-  data: { mode: 'login', username: '', password: '', newPassword: '', nickname: '', phone: '', email: '', busy: false, error: '', visible: false },
+  data: { mode: 'login', username: '', password: '', nickname: '', phone: '', email: '', busy: false, error: '', visible: false },
   onLoad(options) { this.next = options.next ? decodeURIComponent(options.next) : '/pages/home/index'; },
   input(event) { this.setData({ [event.currentTarget.dataset.field]: event.detail.value, error: '' }); },
-  mode(event) { this.setData({ mode: event.currentTarget.dataset.mode, error: '' }); },
+  mode(event) {
+    const mode = event.currentTarget.dataset.mode;
+    if (mode !== 'login' && mode !== 'register') return;
+    this.setData({ mode, error: '', visible: false });
+  },
   toggle() { this.setData({ visible: !this.data.visible }); },
+  goForgot() { wx.navigateTo({ url: `/pages/forgot/index?next=${encodeURIComponent(this.next)}` }); },
   saveSession(result, fallbackUsername) {
     if (!result.token_name || !result.token_value) throw new Error('登录响应不完整，请联系管理员');
     const user = result.user || {};
@@ -35,21 +40,6 @@ Page({
       this.saveSession(result, username);
       this.setData({ password: '' });
       auth.finishLogin(this.next);
-    } catch (error) { this.setData({ error: error.message }); }
-    finally { this.setData({ busy: false }); }
-  },
-  async forgot() {
-    if (this.data.busy) return;
-    const username = this.data.username.trim();
-    const newPassword = this.data.newPassword;
-    if (!username) { this.setData({ error: '请输入需要找回的账号' }); return; }
-    if (!this.data.phone.trim() && !this.data.email.trim()) { this.setData({ error: '请输入绑定手机号或邮箱' }); return; }
-    if (newPassword.length < 8 || newPassword.length > 100) { this.setData({ error: '新密码长度应为 8–100 位' }); return; }
-    this.setData({ busy: true, error: '' });
-    try {
-      await api.forgotPassword({ username, phone: this.data.phone.trim(), email: this.data.email.trim(), new_password: newPassword });
-      wx.showToast({ title: '密码已重置', icon: 'success' });
-      this.setData({ mode: 'login', password: '', newPassword: '' });
     } catch (error) { this.setData({ error: error.message }); }
     finally { this.setData({ busy: false }); }
   },

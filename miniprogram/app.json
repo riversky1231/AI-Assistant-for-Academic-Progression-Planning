@@ -1,5 +1,5 @@
 {
-  "pages": ["pages/home/index", "pages/schools/index", "pages/recommend/index", "pages/mine/index", "pages/login/index", "pages/school-detail/index", "pages/results/index"],
+  "pages": ["pages/home/index", "pages/schools/index", "pages/recommend/index", "pages/mine/index", "pages/login/index", "pages/forgot/index", "pages/school-detail/index", "pages/results/index"],
   "window": { "navigationBarTitleText": "向远 · 升学规划", "navigationBarBackgroundColor": "#f7f8f2", "navigationBarTextStyle": "black", "backgroundColor": "#f7f8f2", "backgroundTextStyle": "dark" },
   "tabBar": {
     "custom": true,
