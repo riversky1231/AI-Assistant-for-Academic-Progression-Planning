@@ -49,12 +49,27 @@ public class RedisGatewayImpl implements RedisGateway {
     }
 
     public long increment(String key, Duration ttl) {
-        Object response = execute("INCR", key);
-        long value = ((Number) response).longValue();
-        if (value == 1) {
-            expire(key, ttl);
-        }
-        return value;
+        Object response = execute("EVAL",
+                "local n = redis.call('incr', KEYS[1]); if n == 1 then redis.call('expire', KEYS[1], ARGV[1]) end; return n",
+                "1", key, String.valueOf(ttl.toSeconds()));
+        return ((Number) response).longValue();
+    }
+
+    public boolean acquireLock(String key, String owner, Duration ttl) {
+        return "OK".equals(execute("SET", key, owner, "NX", "EX", String.valueOf(ttl.toSeconds())));
+    }
+
+    public void releaseLock(String key, String owner) {
+        execute("EVAL", "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+                "1", key, owner);
+    }
+
+    public boolean setIfLockOwner(String lockKey, String owner, String key, String value, Duration ttl) {
+        Object result = execute("EVAL",
+                "if redis.call('get', KEYS[1]) ~= ARGV[1] then return 0 end; "
+                        + "redis.call('setex', KEYS[2], ARGV[2], ARGV[3]); return 1",
+                "2", lockKey, key, owner, String.valueOf(ttl.toSeconds()), value);
+        return ((Number) result).longValue() == 1;
     }
 
     private Object execute(String... command) {

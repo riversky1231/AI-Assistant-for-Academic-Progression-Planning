@@ -1,0 +1,9 @@
+[
+  {"path":"references/research/01-writings.md","description":"著作与系统思考，分析框架的背景"},
+  {"path":"references/research/02-conversations.md","description":"公开采访与对谈，观点语境"},
+  {"path":"references/research/03-expression-dna.md","description":"表达方式研究，仅作风格参考"},
+  {"path":"references/research/04-external-views.md","description":"外部评价与批评，分析方法的局限"},
+  {"path":"references/research/05-decisions.md","description":"决策案例与取舍分析"},
+  {"path":"references/research/06-timeline.md","description":"人物时间线背景，未经本项目独立核实"},
+  {"path":"examples/demo-conversation.md","description":"示例对话，非真实查询结果或当前统计数据"}
+]
