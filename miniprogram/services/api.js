@@ -22,5 +22,6 @@ module.exports = {
     return request('/schools', 'GET', data);
   },
   school: id => request('/schools/' + encodeURIComponent(id)),
-  recommend: data => request('/recommend', 'POST', data)
+  recommend: data => request('/recommend', 'POST', data),
+  chat: data => request('/agent/chat', 'POST', data, { timeout: 300000 })
 };

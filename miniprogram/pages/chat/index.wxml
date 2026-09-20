@@ -1,0 +1,45 @@
+<view class="chat-page" style="bottom: {{keyboardHeight}}px;">
+  <view class="chat-header">
+    <view class="advisor"><view class="advisor-mark">✦</view><view><view class="advisor-name">向远升学助手 <text class="ai-tag">AI</text></view><view class="advisor-note">一起把选择，想得更清楚。</view></view></view>
+    <button class="new-chat" bindtap="newChat" disabled="{{!loggedIn || busy}}">＋ 新咨询</button>
+  </view>
+  <scroll-view class="conversation" scroll-y="{{true}}" scroll-into-view="{{scrollTarget}}" scroll-with-animation="{{true}}">
+    <view class="conversation-inner">
+      <view wx:if="{{!messages.length}}" class="welcome-panel">
+        <view class="welcome-art"><view class="art-orbit"></view><view class="art-orbit art-orbit-two"></view><text class="art-spark">✦</text><text class="art-dot">·</text></view>
+        <view class="eyebrow">A LITTLE CLARITY, A NEW POSSIBILITY</view>
+        <view class="welcome-title">关于未来，<view>我们慢慢聊。</view></view>
+        <view class="welcome-description">选学校、选专业，或是还没想清楚的方向。<view>从你最关心的一个问题开始。</view></view>
+        <view class="topic-label">试着这样开始</view>
+        <button wx:for="{{suggestions}}" wx:key="title" class="topic" data-index="{{index}}" bindtap="suggest">
+          <text class="topic-icon">{{item.icon}}</text><view class="topic-copy"><view class="topic-title">{{item.title}}</view><view class="topic-detail">{{item.detail}}</view></view><text class="topic-arrow">↗</text>
+        </button>
+        <view class="scope-note">AI 辅助分析，不代表真人意见。院校数据来自现有数据库，背景资料不代表最新招生或就业信息。</view>
+      </view>
+      <view wx:if="{{messages.length}}" class="history-note">仅在本次小程序使用期间保留最近 8 轮对话</view>
+      <view wx:for="{{messages}}" wx:key="id" id="{{item.id}}" class="message message-{{item.role}}">
+        <view wx:if="{{item.role === 'assistant'}}" class="message-label"><text class="small-spark">✦</text> 向远 · 升学助手</view>
+        <view class="bubble">
+          <text wx:if="{{item.role === 'user'}}" class="user-text" user-select="{{true}}">{{item.text}}</text>
+          <answer-text wx:else content="{{item.text}}" />
+          <view wx:if="{{item.role === 'assistant'}}" class="answer-actions">
+            <button wx:if="{{item.sources.length}}" class="source-link" data-id="{{item.id}}" bindtap="sources">查看 {{item.sources.length}} 项咨询依据 ↗</button>
+            <text wx:else class="no-sources">本轮未引用查询数据</text>
+            <button class="copy-button" data-id="{{item.id}}" bindtap="copy">复制</button>
+          </view>
+        </view>
+      </view>
+      <view wx:if="{{busy}}" id="thinking" class="thinking"><view class="thinking-dots"><text></text><text></text><text></text></view><view><view>正在认真梳理你的问题</view><view class="muted">查询与分析可能需要一些时间，请稍候</view></view></view>
+      <view class="scroll-space"></view>
+    </view>
+  </scroll-view>
+  <view class="composer {{keyboardHeight ? 'keyboard-open' : ''}}">
+    <view wx:if="{{error}}" class="chat-error"><text>{{error}}</text><button wx:if="{{expired}}" class="text-button" bindtap="newChat">保留问题，开启新咨询 ↗</button><button wx:else class="text-button" bindtap="plan">前往志愿推荐 ↗</button></view>
+    <block wx:if="{{loggedIn}}">
+      <view class="composer-tools"><button class="profile-chip" bindtap="useProfile" disabled="{{busy}}">＋ {{profile ? '引用我的考生档案' : '完善考生档案'}}</button><text class="character-count">{{draft.length}} / 4000</text></view>
+      <view class="input-shell"><textarea class="chat-input" value="{{draft}}" bindinput="input" placeholder="写下你的问题，让选择更有方向…" placeholder-class="input-placeholder" maxlength="4000" disabled="{{busy}}" fixed="{{true}}" adjust-position="{{false}}" bindkeyboardheightchange="keyboard" bindfocus="keyboard" bindblur="blur" show-confirm-bar="{{false}}" /><button class="send-button" bindtap="send" loading="{{busy}}" disabled="{{busy || expired || !draft.length}}" aria-label="发送问题">{{busy ? '' : '↑'}}</button></view>
+      <view class="composer-note">发送后由 AI 分析 · 报考请核对当年官方招生信息</view>
+    </block>
+    <view wx:else class="login-panel"><button class="primary" bindtap="login">登录，开始我的咨询 ↗</button><view class="composer-note">结合你的情况，探索适合的升学方向</view></view>
+  </view>
+</view>

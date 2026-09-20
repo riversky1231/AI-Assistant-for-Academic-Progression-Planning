@@ -23,6 +23,8 @@ const storage = require('../miniprogram/utils/storage');
 const auth = require('../miniprogram/utils/auth');
 const api = require('../miniprogram/services/api');
 const planning = require('../miniprogram/utils/planning');
+const consultation = require('../miniprogram/utils/consultation');
+beforeEach(() => consultation.clear());
 const account = () => storage.write('session', { tokenName: 'satoken', tokenValue: 'test-token', username: 'student' });
 const respond = (index, data, statusCode = 200) => requests[index].success({ statusCode, data });
 const validForm = () => ({ province: '福建', subject_type: '物理类', score: '580', rank: '15000', major_preference: '计算机', region_preference: '江浙沪' });
@@ -107,6 +109,33 @@ test('network timeout and unexpected success body reject instead of showing fals
   let promise = api.health(); requests[0].fail({ errMsg: 'request:fail timeout' }); await assert.rejects(promise, /超时/);
   promise = api.health(); respond(1, '<html>proxy error</html>'); await assert.rejects(promise, /请求失败/);
 });
+test('device request failures retain native diagnostics without logging credentials or clearing the session', async t => {
+  const warning = t.mock.method(console, 'warn', () => {});
+  account();
+  const nativeError = { errMsg: 'request:fail net::ERR_CONNECTION_REFUSED', errno: 600001, errCode: -102 };
+  const promise = api.schools({ keyword: 'private-filter' });
+  requests[0].fail(nativeError);
+  await assert.rejects(promise, error => error.errMsg === nativeError.errMsg && error.errno === 600001 && error.errCode === -102 && !error.timedOut);
+  assert.equal(auth.session().tokenValue, 'test-token');
+  assert.equal(navigation.length, 0);
+  assert.equal(warning.mock.callCount(), 1);
+  const [label, diagnostic] = warning.mock.calls[0].arguments;
+  assert.equal(label, '[request:fail]');
+  assert.equal(diagnostic.url, requests[0].url);
+  assert.equal(diagnostic.errMsg, nativeError.errMsg);
+  assert.equal(diagnostic.errno, nativeError.errno);
+  assert.doesNotMatch(JSON.stringify(diagnostic), /test-token|satoken|private-filter/);
+  const login = api.login({ username: 'private-user', password: 'private-password' });
+  requests[1].fail(nativeError);
+  await assert.rejects(login);
+  assert.doesNotMatch(JSON.stringify(warning.mock.calls[1].arguments), /private-user|private-password/);
+});
+test('domain rejection is actionable and diagnostic failures cannot leave requests pending', async t => {
+  t.mock.method(console, 'warn', () => { throw new Error('debug console unavailable'); });
+  const promise = api.health();
+  requests[0].fail({ errMsg: 'request:fail url not in domain list' });
+  await assert.rejects(promise, error => /域名校验/.test(error.message) && error.errMsg === 'request:fail url not in domain list');
+});
 test('release builds fail explicitly until the real service URL is configured', async () => {
   wx.getAccountInfoSync = () => ({ miniProgram: { envVersion: 'release' } });
   await assert.rejects(api.health(), /尚未配置/); assert.equal(requests.length, 0);
@@ -177,8 +206,185 @@ test('all declared pages, components and template event handlers exist', () => {
     new vm.Script(script);
     const template = fs.readFileSync(path.join(root, entry + '.wxml'), 'utf8');
     assert.ok(!/<(?:div|span|br|p|h1)\b/.test(template), entry + ' must use native WXML');
-    for (const match of template.matchAll(/(?:bind|catch)(?:tap|input|change|confirm|retry)="(\w+)"/g)) {
+    for (const match of template.matchAll(/(?:bind|catch)(?:tap|input|change|confirm|retry|focus|blur|keyboardheightchange)="(\w+)"/g)) {
       assert.ok(new RegExp('\\b' + match[1] + '\\s*\\(').test(script), entry + ': missing handler ' + match[1]);
     }
   }
+});
+
+const conversationId = '2ea2ab57-8624-4b54-aeb9-64bc37228262';
+const reply = (answer = '先了解你的科类和位次。', sources = []) => ({ code: 0, data: { answer, conversation_id: conversationId, sources } });
+const inputChat = (chat, value) => chat.input({ detail: { value } });
+
+test('chat uses a separate long timeout, preserves conversation IDs and blocks duplicate sends', async () => {
+  account(); const chat = page('chat'); chat.onShow(); inputChat(chat, '  想了解计算机专业  ');
+  const first = chat.send(); await chat.send();
+  assert.equal(requests.length, 1); assert.equal(requests[0].timeout, 300000);
+  assert.equal(requests[0].url.endsWith('/agent/chat'), true);
+  assert.equal(requests[0].header.satoken, 'test-token');
+  assert.equal(JSON.stringify(requests[0].data), JSON.stringify({ message: '想了解计算机专业' }));
+  assert.equal(chat.data.busy, true);
+  respond(0, reply()); await first;
+  assert.equal(chat.data.messages.length, 2); assert.equal(chat.data.busy, false);
+  inputChat(chat, '物理类，15000位'); const second = chat.send();
+  assert.equal(requests[1].data.conversation_id, conversationId);
+  respond(1, reply('可以进一步比较院校。')); await second;
+  assert.equal(chat.data.messages.length, 4);
+  const health = api.health(); assert.equal(requests[2].timeout, 15000);
+  respond(2, { code: 0, data: { status: 'ok' } }); await health;
+});
+
+test('chat validates empty and oversized messages before requesting', async () => {
+  account(); const chat = page('chat'); chat.onShow();
+  for (const value of ['  ', 'a'.repeat(4001)]) {
+    inputChat(chat, value); await chat.send(); assert.ok(chat.data.error);
+  }
+  assert.equal(requests.length, 0);
+  inputChat(chat, 'a'.repeat(4000)); const pending = chat.send();
+  assert.equal(requests.length, 1); respond(0, reply()); await pending;
+});
+
+test('chat failures restore the question, preserve history and distinguish expired sessions from missing schools', async () => {
+  account(); const chat = page('chat'); chat.onShow(); inputChat(chat, '先聊聊');
+  const first = chat.send(); respond(0, reply()); await first;
+  inputChat(chat, '查学校'); const missing = chat.send();
+  respond(1, { code: 404, message: '学校不存在' }, 404); await missing;
+  assert.equal(chat.data.expired, false); assert.equal(chat.data.messages.length, 2);
+  assert.equal(chat.data.draft, '查学校');
+  const expired = chat.send(); respond(2, { code: 404, message: '会话不存在或已过期，请开始新会话' }, 404); await expired;
+  assert.equal(chat.data.expired, true); await chat.send(); assert.equal(requests.length, 3);
+  inputChat(chat, '修改后的问题'); assert.ok(chat.data.error);
+  wx.showModal = options => options.success({ confirm: true }); chat.newChat();
+  assert.equal(chat.data.messages.length, 0); assert.equal(chat.data.draft, '修改后的问题');
+  const fresh = chat.send(); assert.equal(requests[3].data.conversation_id, undefined);
+  respond(3, reply()); await fresh;
+});
+
+test('chat handles busy, throttled, unavailable and timeout responses without automatic retries', async () => {
+  account(); const chat = page('chat'); chat.onShow();
+  for (const status of [403, 409, 429, 502, 503, 504]) {
+    inputChat(chat, '我的问题'); const index = requests.length; const pending = chat.send();
+    respond(index, { code: status, message: 'server error' }, status); await pending;
+    assert.equal(requests.length, index + 1); assert.equal(chat.data.busy, false);
+    assert.equal(chat.data.draft, '我的问题'); assert.ok(chat.data.error);
+    assert.equal(chat.data.messages.length, 0); assert.equal(chat.data.expired, false);
+  }
+  const pending = chat.send(); requests.at(-1).fail({ errMsg: 'request:fail timeout' }); await pending;
+  assert.match(chat.data.error, /避免连续发送/); assert.equal(chat.data.draft, '我的问题');
+});
+
+test('invalid chat responses never add a fabricated answer or lose the question', async () => {
+  account(); const chat = page('chat'); chat.onShow(); inputChat(chat, '帮我看看');
+  const pending = chat.send(); respond(0, { code: 0, data: { answer: '', conversation_id: conversationId } }); await pending;
+  assert.equal(chat.data.messages.length, 0); assert.equal(chat.data.draft, '帮我看看');
+  assert.match(chat.data.error, /不完整/);
+});
+
+test('a chat response finishing after leaving the page updates a reopened consultation', async () => {
+  account(); const original = page('chat'); original.onShow(); inputChat(original, '专业怎么选');
+  const pending = original.send(); original.onHide(); original.onUnload();
+  const reopened = page('chat'); reopened.onShow(); assert.equal(reopened.data.busy, true);
+  await reopened.send(); assert.equal(requests.length, 1);
+  respond(0, reply('一起梳理兴趣与目标。')); await pending;
+  assert.equal(reopened.data.busy, false); assert.equal(reopened.data.messages[1].text, '一起梳理兴趣与目标。');
+});
+
+test('logout and account switches discard pending consultation replies and private drafts', async () => {
+  account(); const original = page('chat'); original.onShow(); inputChat(original, '私人问题');
+  const pending = original.send(); storage.clear();
+  assert.equal(original.data.messages.length, 0); assert.equal(original.data.loggedIn, false);
+  storage.write('session', { tokenName: 'satoken', tokenValue: 'other-account' });
+  const other = page('chat'); other.onShow(); inputChat(other, '另一个账号的问题');
+  respond(0, reply('旧账号回复')); await pending;
+  assert.equal(other.data.messages.length, 0); assert.equal(other.data.draft, '另一个账号的问题');
+  assert.equal(auth.session().tokenValue, 'other-account');
+});
+
+test('401 clears the consultation and login returns to the chat entry', async () => {
+  account(); currentPages = [{ route: 'pages/chat/index' }];
+  const chat = page('chat'); chat.onShow(); inputChat(chat, '提问');
+  const pending = chat.send(); respond(0, { code: 401 }, 401); await pending;
+  assert.equal(chat.data.messages.length, 0); assert.equal(chat.data.loggedIn, false);
+  assert.equal(navigation.at(-1), '/pages/login/index?next=' + encodeURIComponent('/pages/chat/index'));
+  auth.finishLogin('/pages/chat/index'); assert.equal(navigation.at(-1), '/pages/chat/index');
+  auth.finishLogin('/pages/chat/index?arbitrary=true'); assert.equal(navigation.at(-1), '/pages/home/index');
+});
+
+test('profile and recommendation entries prepare editable drafts without sending personal data automatically', () => {
+  account(); storage.write('profile', { ...validForm(), score: 0 });
+  const chat = page('chat'); chat.onShow(); chat.useProfile();
+  assert.match(chat.data.draft, /0分/); assert.match(chat.data.draft, /全省位次15000/);
+  storage.write('result', { profile: { ...validForm(), rank: 23000 } });
+  inputChat(chat, '');
+  chat.onLoad({ from: 'results' }); chat.onShow();
+  assert.match(chat.data.draft, /23000/); assert.equal(requests.length, 0);
+  assert.equal(saved.has('xiangyuan.chat'), false);
+});
+
+test('consultation retains only the latest eight complete rounds and clears them for a new topic', async () => {
+  account(); const chat = page('chat'); chat.onShow();
+  for (let i = 0; i < 9; i++) {
+    inputChat(chat, '问题' + i); const pending = chat.send(); respond(i, reply('回答' + i)); await pending;
+  }
+  assert.equal(chat.data.messages.length, 16); assert.equal(chat.data.messages[0].text, '问题1');
+  wx.showModal = options => options.success({ confirm: false }); chat.newChat();
+  assert.equal(chat.data.messages.length, 16);
+  wx.showModal = options => options.success({ confirm: true }); chat.newChat();
+  assert.equal(chat.data.messages.length, 0); assert.equal(chat.data.draft, '');
+  inputChat(chat, '新话题'); const pending = chat.send(); assert.equal(requests[9].data.conversation_id, undefined);
+  respond(9, reply()); await pending;
+});
+
+test('adding a profile or opening results preserves an existing draft and does not duplicate profile context', () => {
+  account(); storage.write('profile', validForm()); storage.write('result', { profile: { ...validForm(), rank: 23000 } });
+  const chat = page('chat'); chat.onShow(); inputChat(chat, '我希望学费少一些');
+  chat.useProfile(); const draft = chat.data.draft;
+  assert.match(draft, /学费少一些/); assert.match(draft, /全省位次15000/);
+  chat.useProfile(); assert.equal(chat.data.draft, draft);
+  chat.onLoad({ from: 'results' }); chat.onShow(); assert.equal(chat.data.draft, draft);
+  inputChat(chat, '字'.repeat(3999)); chat.useProfile();
+  assert.equal(chat.data.draft.length, 3999); assert.match(chat.data.error, /超过 4000/);
+  assert.equal(requests.length, 0);
+});
+
+test('source details show all four tool shapes, original grouping, background content and empty records', async () => {
+  account(); const chat = page('chat'); chat.onShow(); inputChat(chat, '请查数据');
+  const recommendation = { category: '保', gap: -9999, school: { id: 2, name: '福州大学' }, major: { name: '软件工程', min_score: 580, min_rank: 16000 }, reason: '保持后端分组和理由' };
+  const sources = [
+    { tool: 'search_schools', data: [] },
+    { tool: 'school_detail', data: { id: 2, name: '福州大学', admissions: [{ province: '福建', subject_type: '物理类', year: 2025, min_score: null, min_rank: 16000, major: { name: '软件工程' } }] } },
+    { tool: 'recommend', data: { recommendations: { 冲: [], 稳: [], 保: [recommendation] }, disclaimer: '后端免责声明' } },
+    { tool: 'read_skill_resource', data: { description: '研究背景', kind: 'background_reference', content: '# 背景\n不是实时政策。' } }
+  ];
+  const pending = chat.send(); respond(0, reply('回答', sources)); await pending;
+  const messageId = chat.data.messages[1].id;
+  assert.equal(chat.data.messages[1].sources.length, 4);
+  assert.equal(chat.data.messages[1].sources[3].content, undefined);
+  const details = page('chat-sources'); details.onLoad({ message: messageId }); details.onShow();
+  assert.equal(details.data.available, true); assert.equal(details.data.referenceCount, 1);
+  assert.equal(details.data.sources[0].schools.length, 0);
+  assert.equal(details.data.sources[1].admissions[0].scoreText, '—');
+  assert.equal(details.data.sources[1].admissions[0].rankText, '16,000');
+  assert.equal(details.data.sources[2].groups[2].items[0].reason, recommendation.reason);
+  assert.equal(details.data.sources[2].disclaimer, '后端免责声明');
+  details.toggle({ currentTarget: { dataset: { index: 3 } } }); assert.equal(details.data.sources[3].open, true);
+  details.detail({ currentTarget: { dataset: { id: 2 } } }); assert.equal(navigation.at(-1), '/pages/school-detail/index?id=2');
+  storage.clear(); details.onShow(); assert.equal(details.data.available, false); assert.equal(details.data.sources.length, 0);
+});
+
+test('source pages handle missing snapshots without making network requests', () => {
+  account(); const details = page('chat-sources'); details.onLoad({ message: 'missing' }); details.onShow();
+  assert.equal(details.data.available, false); assert.equal(requests.length, 0);
+  details.chat(); assert.equal(navigation.at(-1), '/pages/chat/index');
+});
+
+test('answer rendering treats HTML and links as inert native text while preserving headings and emphasis', () => {
+  const { blocks } = require('../miniprogram/utils/answer');
+  const result = blocks('# 标题\n- **重点** 与 `位次`\n<script>alert(1)</script>\n[链接](javascript:alert(1))');
+  assert.equal(result[0].kind, 'heading'); assert.equal(result[1].kind, 'list');
+  assert.equal(result[1].parts[0].kind, 'bold'); assert.equal(result[1].parts[2].kind, 'code');
+  assert.equal(result[2].parts[0].text, '<script>alert(1)</script>');
+  assert.equal(result[3].parts[0].text, '[链接](javascript:alert(1))');
+  const template = fs.readFileSync(path.join(root, 'components/answer-text/index.wxml'), 'utf8');
+  assert.equal(template.includes('rich-text'), false); assert.equal(template.includes('web-view'), false);
 });

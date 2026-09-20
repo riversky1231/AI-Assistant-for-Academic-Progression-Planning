@@ -21,6 +21,7 @@ Page({
   onPullDownRefresh() { this.load().finally(() => wx.stopPullDownRefresh()); },
   onUnload() { this._seq = (this._seq || 0) + 1; },
   plan() { wx.switchTab({ url: '/pages/recommend/index' }); },
+  chat() { wx.navigateTo({ url: '/pages/chat/index' }); },
   schools() { wx.switchTab({ url: '/pages/schools/index' }); },
   login() { auth.login('/pages/home/index'); }
 });

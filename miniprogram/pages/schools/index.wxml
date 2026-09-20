@@ -1,6 +1,10 @@
 <view class="page tab-page">
   <view class="eyebrow">FIND YOUR UNIVERSITY</view><view class="title heading"><view>总有一所大学，</view><view>与你的热爱相遇。</view></view>
-  <view class="search"><text class="search-symbol">⌕</text><input value="{{keyword}}" bindinput="input" bindconfirm="load" maxlength="50" confirm-type="search" placeholder="搜索院校名称或关键词" placeholder-class="placeholder" /><button bindtap="load">搜索</button></view>
+  <view class="search">
+    <text class="search-symbol">⌕</text>
+    <input class="search-input" value="{{keyword}}" bindinput="input" bindconfirm="load" maxlength="50" confirm-type="search" placeholder="搜索院校名称或关键词" placeholder-class="placeholder" />
+  </view>
+  <button class="search-button" bindtap="load">搜索</button>
   <view class="between filters"><picker range="{{provinces}}" value="{{provinceIndex}}" bindchange="province"><view class="filter">{{provinces[provinceIndex]}} <text>⌄</text></view></picker><text class="muted">按院校所在地筛选</text></view>
   <view class="section-head list-heading"><text class="section-title">院校一览</text><text class="muted" wx:if="{{loggedIn && !loading && !error}}">本次展示 {{schools.length}} 所</text></view>
   <state-card wx:if="{{!loggedIn}}" title="登录，发现更多可能" description="院校与录取信息需要登录后查看" action="去登录" bindretry="login" />

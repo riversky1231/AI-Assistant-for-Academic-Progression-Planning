@@ -1,0 +1,6 @@
+<view class="answer">
+  <view wx:for="{{blocks}}" wx:key="key" class="block {{item.kind}}">
+    <text wx:if="{{item.kind === 'list'}}" class="bullet">·</text>
+    <text class="copy" user-select="{{true}}"><text wx:for="{{item.parts}}" wx:for-item="part" wx:key="key" class="{{part.kind}}">{{part.text}}</text></text>
+  </view>
+</view>

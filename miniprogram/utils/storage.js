@@ -7,5 +7,6 @@ function write(key, value) {
 }
 function clear() {
   Object.keys(KEYS).forEach(key => wx.removeStorageSync(KEYS[key]));
+  require('./consultation').clear();
 }
 module.exports = { read, write, clear };

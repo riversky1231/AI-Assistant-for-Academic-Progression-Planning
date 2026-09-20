@@ -1,0 +1,7 @@
+.answer { color: #34483b; font-size: 28rpx; line-height: 1.85; overflow-wrap: break-word; word-break: break-word; }
+.block + .block { margin-top: 18rpx; }
+.heading { font-size: 30rpx; font-weight: 650; color: #244c3b; }
+.list { display: flex; }.bullet { flex: none; width: 26rpx; font-weight: bold; color: #78925d; }.copy { min-width: 0; white-space: pre-wrap; }
+.bold { font-weight: 650; }.code { background: #edf1e8; padding: 2rpx 6rpx; border-radius: 5rpx; font-family: monospace; }
+.pre { font-family: monospace; font-size: 24rpx; background: #f2f4ee; padding: 12rpx 16rpx; border-radius: 8rpx; }
+.quote { border-left: 4rpx solid #c9d6b7; padding-left: 20rpx; color: #7a866e; }

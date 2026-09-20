@@ -12,6 +12,6 @@
       <view class="major">{{item.major.name}}</view><view class="result-metrics"><view><text>{{item.major.min_score}}</text><view>历史最低分</view></view><view><text>{{item.rankText}}</text><view>历史最低位次</view></view><view><text>{{item.gapText}}</text><view>位次差</view></view></view>
       <view class="reason">{{item.reason}}</view><button class="text-button detail-link" data-id="{{item.school.id}}" bindtap="detail">查看院校与录取详情 ↗</button>
     </view>
-    <view class="notice section">{{disclaimer || '推荐基于本地演示数据与规则，仅供参考，不承诺录取结果。'}}</view><button class="secondary section" bindtap="edit">修改条件，重新推荐</button>
+    <view class="notice section">{{disclaimer || '推荐基于本地演示数据与规则，仅供参考，不承诺录取结果。'}}</view><button class="primary section" bindtap="chat">✦ 和 AI 聊聊我的志愿方向</button><button class="secondary section" bindtap="edit">修改条件，重新推荐</button>
   </block>
 </view>

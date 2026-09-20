@@ -2,6 +2,7 @@
   <view class="eyebrow">MY JOURNEY</view>
   <view class="account"><view class="avatar">{{loggedIn ? '我' : '远'}}</view><view class="account-copy"><view class="account-name">{{loggedIn ? username : '你好，未来探索者'}}</view><view class="subtitle">每一步，都离理想更近一些。</view></view></view>
   <button wx:if="{{!loggedIn}}" class="primary" bindtap="login">登录我的账号 ↗</button>
+  <view class="card menu section"><button class="menu-row" bindtap="chat"><view><text class="menu-icon">✦</text>我的智能咨询</view><text class="menu-note">继续聊聊 ›</text></button></view>
   <view wx:if="{{loggedIn}}" class="card section account-card">
     <view class="section-head"><text class="section-title">账号资料</text><text class="muted">{{account && account.wechat_bound ? '已绑定微信' : '未绑定微信'}}</text></view>
     <view class="field"><text class="label">昵称</text><input class="input" value="{{accountForm.nickname}}" data-group="accountForm" data-field="nickname" bindinput="input" maxlength="50" placeholder="填写昵称" /></view>

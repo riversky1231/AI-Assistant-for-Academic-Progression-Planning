@@ -16,5 +16,6 @@ Page({
   select(event) { const active = Number(event.currentTarget.dataset.index); this.setData({ active, items: this.data.groups[active].items }); },
   detail(event) { wx.navigateTo({ url: '/pages/school-detail/index?id=' + event.currentTarget.dataset.id }); },
   edit() { wx.switchTab({ url: '/pages/recommend/index' }); },
+  chat() { wx.navigateTo({ url: '/pages/chat/index?from=results' }); },
   explain() { wx.showModal({ title: '推荐依据', content: '位次差 = 历史最低位次 − 你的位次。小于 −2000 为“冲”，−2000 至 2000 为“稳”，大于 2000 为“保”。同类按位次差绝对值排序，最多 5 条。分数用于展示，不参与分类；分组不代表录取概率。', showCancel: false, confirmColor: '#244c3b' }); }
 });

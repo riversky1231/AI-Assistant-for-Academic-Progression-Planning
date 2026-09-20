@@ -27,6 +27,7 @@ function requireLogin() {
 function finishLogin(next) {
   const path = (next || '').split('?')[0];
   if (TABS.includes(path)) { wx.switchTab({ url: path }); return; }
+  if (next === '/pages/chat/index') { wx.redirectTo({ url: next }); return; }
   if (path === '/pages/school-detail/index' && /^\/pages\/school-detail\/index\?id=\d+$/.test(next)) {
     wx.redirectTo({ url: next }); return;
   }

@@ -38,6 +38,7 @@ Page({
   login() { auth.login('/pages/mine/index'); },
   plan() { wx.switchTab({ url: '/pages/recommend/index' }); },
   results() { wx.navigateTo({ url: '/pages/results/index' }); },
+  chat() { wx.navigateTo({ url: '/pages/chat/index' }); },
   async health() {
     if (this.data.checking) return;
     this.setData({ checking: true, healthText: '' });
