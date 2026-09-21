@@ -10,3 +10,4 @@ backend/target/
 # Local editor and WeChat DevTools settings
 .vscode/
 miniprogram/project.private.config.json
+/project.private.config.json

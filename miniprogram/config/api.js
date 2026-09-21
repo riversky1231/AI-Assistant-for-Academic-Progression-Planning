@@ -1,6 +1,6 @@
 // 开发者工具使用本机地址；体验版、正式版需填写自己的 HTTPS 服务域名。
 const BASE_URLS = {
-  develop: 'http://192.168.43.80:8080',
+  develop: 'http://127.0.0.1:8080',
   trial: '',
   release: ''
 };
