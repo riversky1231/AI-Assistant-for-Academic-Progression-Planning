@@ -1,0 +1,29 @@
+# Small-server overlay. Requires deploy/server/app.jar from a tested local Maven build.
+services:
+  backend:
+    build:
+      context: ./deploy/server
+      dockerfile: Dockerfile
+    mem_limit: 640m
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=64m -Dfile.encoding=UTF-8"
+  mysql:
+    mem_limit: 768m
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --innodb-buffer-pool-size=128M
+      - --max-connections=30
+      - --performance-schema=OFF
+  redis:
+    mem_limit: 128m
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env.docker}"
+      - --maxmemory
+      - 32mb
+      - --maxmemory-policy
+      - noeviction

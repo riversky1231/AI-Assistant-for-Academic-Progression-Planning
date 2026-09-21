@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.academic.planning.mapper.UserMapper">
+    <insert id="initializeDefaultRole">
+        INSERT INTO sys_role (role_code, role_name) VALUES ('user', '普通用户')
+        ON DUPLICATE KEY UPDATE role_code = VALUES(role_code)
+    </insert>
+    <insert id="initializeDefaultPermissions">
+        INSERT INTO sys_permission (permission_code, permission_name) VALUES
+            ('school:read', '查看院校数据'),
+            ('recommend:use', '使用冲稳保推荐')
+        ON DUPLICATE KEY UPDATE permission_code = VALUES(permission_code)
+    </insert>
+    <insert id="initializeDefaultRolePermissions">
+        INSERT IGNORE INTO sys_role_permission (role_id, permission_id)
+        SELECT r.id, p.id FROM sys_role r CROSS JOIN sys_permission p
+        WHERE r.role_code = 'user'
+          AND p.permission_code IN ('school:read', 'recommend:use')
+    </insert>
     <insert id="insertRoleByCode">
         INSERT IGNORE INTO sys_user_role (user_id, role_id)
         SELECT #{userId}, id

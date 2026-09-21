@@ -24,6 +24,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -76,6 +77,7 @@ public class AuthServiceImpl implements AuthService {
         return login;
     }
 
+    @Transactional
     public LoginVO register(RegisterRequest request) {
         String username = cleanRequired(request.username());
         assertUsernameAvailable(username, null);
@@ -89,10 +91,11 @@ public class AuthServiceImpl implements AuthService {
         user.setEmail(clean(request.email()));
         user.setEnabled(true);
         userMapper.insert(user);
-        userMapper.insertRoleByCode(user.getId(), "user");
+        initializeUserPermissions(user);
         return createSession(user);
     }
 
+    @Transactional
     public LoginVO wechatLogin(WechatLoginRequest request) {
         String openid = "mock_" + sha256(cleanRequired(request.code())).substring(0, 32);
         SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>()
@@ -106,7 +109,7 @@ public class AuthServiceImpl implements AuthService {
             user.setWechatOpenid(openid);
             user.setEnabled(true);
             userMapper.insert(user);
-            userMapper.insertRoleByCode(user.getId(), "user");
+            initializeUserPermissions(user);
         }
         if (!Boolean.TRUE.equals(user.getEnabled())) {
             throw new BusinessException(HttpStatus.FORBIDDEN, "账号已被停用");
@@ -168,6 +171,7 @@ public class AuthServiceImpl implements AuthService {
                 .toList();
     }
 
+    @Transactional
     public UserVO createUser(AdminCreateUserRequest request) {
         String username = cleanRequired(request.username());
         assertUsernameAvailable(username, null);
@@ -181,8 +185,15 @@ public class AuthServiceImpl implements AuthService {
         user.setEmail(clean(request.email()));
         user.setEnabled(request.enabled() == null || request.enabled());
         userMapper.insert(user);
-        userMapper.insertRoleByCode(user.getId(), "user");
+        initializeUserPermissions(user);
         return UserVO.from(user);
+    }
+
+    private void initializeUserPermissions(SysUser user) {
+        userMapper.initializeDefaultRole();
+        userMapper.initializeDefaultPermissions();
+        userMapper.initializeDefaultRolePermissions();
+        userMapper.insertRoleByCode(user.getId(), "user");
     }
 
     public UserVO updateUser(long userId, AdminUpdateUserRequest request) {

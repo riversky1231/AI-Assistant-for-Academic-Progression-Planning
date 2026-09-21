@@ -1,3 +1,5 @@
+SET NAMES utf8mb4;
+
 INSERT IGNORE INTO school (id, name, province, city, level, description) VALUES
     (1, '厦门大学', '福建', '厦门', '985', '综合性研究型大学。'),
     (2, '福州大学', '福建', '福州', '211', '国家双一流建设高校。'),
@@ -170,18 +172,21 @@ ON DUPLICATE KEY UPDATE
     nickname = VALUES(nickname),
     enabled = VALUES(enabled);
 
-INSERT INTO sys_role (id, role_code, role_name) VALUES
-    (1, 'admin', '管理员'),
-    (2, 'user', '普通用户')
+INSERT INTO sys_role (role_code, role_name) VALUES
+    ('admin', '管理员'),
+    ('user', '普通用户')
 ON DUPLICATE KEY UPDATE role_name = VALUES(role_name);
 
-INSERT INTO sys_permission (id, permission_code, permission_name) VALUES
-    (1, 'school:read', '查看院校数据'),
-    (2, 'recommend:use', '使用冲稳保推荐'),
-    (3, 'account:manage', '管理用户账号')
+INSERT INTO sys_permission (permission_code, permission_name) VALUES
+    ('school:read', '查看院校数据'),
+    ('recommend:use', '使用冲稳保推荐'),
+    ('account:manage', '管理用户账号')
 ON DUPLICATE KEY UPDATE permission_name = VALUES(permission_name);
 
-INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (1, 1);
-INSERT IGNORE INTO sys_role_permission (role_id, permission_id) VALUES
-    (1, 1), (1, 2), (1, 3),
-    (2, 1), (2, 2);
+INSERT IGNORE INTO sys_user_role (user_id, role_id)
+SELECT u.id, r.id FROM sys_user u CROSS JOIN sys_role r
+WHERE u.username = 'admin' AND r.role_code = 'admin';
+INSERT IGNORE INTO sys_role_permission (role_id, permission_id)
+SELECT r.id, p.id FROM sys_role r CROSS JOIN sys_permission p
+WHERE (r.role_code = 'admin' AND p.permission_code IN ('school:read', 'recommend:use', 'account:manage'))
+   OR (r.role_code = 'user' AND p.permission_code IN ('school:read', 'recommend:use'));
