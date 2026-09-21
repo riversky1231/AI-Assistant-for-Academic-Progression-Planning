@@ -52,7 +52,7 @@ class AgentServiceTest {
         });
         var result = service().chat(new AgentChatRequest("偏好江浙沪"), user, history);
         assertTrue(result.sources().isEmpty());
-        assertEquals("zhangxuefeng-perspective", result.skill().name());
+        assertEquals("zhangxuefeng-skill", result.skill().name());
         assertTrue(result.skill().instructionsInjected());
         assertTrue(result.skill().resourcesRead().isEmpty());
         verify(llm).complete(anyList(), any());

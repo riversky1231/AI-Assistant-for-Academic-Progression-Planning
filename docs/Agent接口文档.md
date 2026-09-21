@@ -97,7 +97,7 @@ HTTP 200；业务成功码为 `0`。下例为结构示例，回答文本与资�
     "sources": [],
     "conversation_id": "2ea2ab57-8624-4b54-aeb9-64bc37228262",
     "skill": {
-      "name": "zhangxuefeng-perspective",
+      "name": "zhangxuefeng-skill",
       "entry": "skills/zhangxuefeng-skill/SKILL.md",
       "instructions_injected": true,
       "instructions_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -122,7 +122,7 @@ HTTP 200；业务成功码为 `0`。下例为结构示例，回答文本与资�
 
 | 字段 | 类型 | 含义 |
 | --- | --- | --- |
-| `name` | string | 固定为 `zhangxuefeng-perspective` |
+| `name` | string | 固定为 `zhangxuefeng-skill` |
 | `entry` | string | 实际使用的项目适配入口路径；不是上游原文入口 |
 | `instructions_injected` | boolean | 当前成功路径为 true，表示 Skill 指令已传入模型上下文；不保证模型遵循了所有要求 |
 | `instructions_sha256` | string | 注入的入口正文与资料目录的 SHA-256，可和启动日志核对 |

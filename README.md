@@ -178,7 +178,7 @@ Skill 位于 `backend/skills/zhangxuefeng-skill/`：
 
 ```json
 {
-  "name": "zhangxuefeng-perspective",
+  "name": "zhangxuefeng-skill",
   "entry": "skills/zhangxuefeng-skill/SKILL.md",
   "instructions_injected": true,
   "instructions_sha256": "本次注入的入口正文及资料目录的 SHA-256",

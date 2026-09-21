@@ -89,7 +89,7 @@ class AgentSkillIntegrationTest {
                             .content(mapper.writeValueAsBytes(Map.of("message", "我想学计算机，如何比较成本？"))))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.sources").isEmpty())
-                    .andExpect(jsonPath("$.data.skill.name").value("zhangxuefeng-perspective"))
+                    .andExpect(jsonPath("$.data.skill.name").value("zhangxuefeng-skill"))
                     .andExpect(jsonPath("$.data.skill.instructions_injected").value(true))
                     .andExpect(jsonPath("$.data.skill.instructions_sha256").value(skill.instructionsSha256()))
                     .andExpect(jsonPath("$.data.skill.resources_read").isEmpty())

@@ -20,7 +20,7 @@ import java.security.NoSuchAlgorithmException;
 @Component
 public class SkillLoader {
     private static final Logger log = LoggerFactory.getLogger(SkillLoader.class);
-    public static final String NAME = "zhangxuefeng-perspective";
+    public static final String NAME = "zhangxuefeng-skill";
     public static final String ENTRY = "skills/zhangxuefeng-skill/SKILL.md";
     private static final String ROOT = "/skills/zhangxuefeng-skill/";
     private static final int MAX_FILE_BYTES = 64 * 1024;
