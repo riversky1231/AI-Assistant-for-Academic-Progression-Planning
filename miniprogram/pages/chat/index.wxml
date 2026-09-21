@@ -1,6 +1,6 @@
-<view class="chat-page" style="bottom: {{keyboardHeight}}px;">
+<view class="chat-page" style="bottom: {{keyboardHeight ? keyboardHeight + 'px' : 'calc(116rpx + env(safe-area-inset-bottom))'}};">
   <view class="chat-header">
-    <view class="advisor"><view class="advisor-mark">✦</view><view><view class="advisor-name">向远升学助手 <text class="ai-tag">AI</text></view><view class="advisor-note">一起把选择，想得更清楚。</view></view></view>
+    <view class="advisor"><image class="advisor-mark" src="/assets/images/agent-avatar.jpg" mode="aspectFill" aria-label="升学助手头像" /><view><view class="advisor-name">雪乐兹升学助手 <text class="ai-tag">AI</text></view><view class="advisor-note">一起把选择，想得更清楚。</view></view></view>
     <button class="new-chat" bindtap="newChat" disabled="{{!loggedIn || busy}}">＋ 新咨询</button>
   </view>
   <scroll-view class="conversation" scroll-y="{{true}}" scroll-into-view="{{scrollTarget}}" scroll-with-animation="{{true}}">
@@ -18,7 +18,7 @@
       </view>
       <view wx:if="{{messages.length}}" class="history-note">仅在本次小程序使用期间保留最近 8 轮对话</view>
       <view wx:for="{{messages}}" wx:key="id" id="{{item.id}}" class="message message-{{item.role}}">
-        <view wx:if="{{item.role === 'assistant'}}" class="message-label"><text class="small-spark">✦</text> 向远 · 升学助手</view>
+        <view wx:if="{{item.role === 'assistant'}}" class="message-label"><image class="message-avatar" src="/assets/images/agent-avatar.jpg" mode="aspectFill" aria-label="升学助手头像" /> 雪乐兹 · 升学助手</view>
         <view class="bubble">
           <text wx:if="{{item.role === 'user'}}" class="user-text" user-select="{{true}}">{{item.text}}</text>
           <answer-text wx:else content="{{item.text}}" />
@@ -29,7 +29,7 @@
           </view>
         </view>
       </view>
-      <view wx:if="{{busy}}" id="thinking" class="thinking"><view class="thinking-dots"><text></text><text></text><text></text></view><view><view>正在认真梳理你的问题</view><view class="muted">查询与分析可能需要一些时间，请稍候</view></view></view>
+      <view wx:if="{{busy}}" id="thinking" class="thinking"><image class="message-avatar" src="/assets/images/agent-avatar.jpg" mode="aspectFill" aria-label="升学助手头像" /><view class="thinking-dots"><text></text><text></text><text></text></view><view><view>正在认真梳理你的问题</view><view class="muted">查询与分析可能需要一些时间，请稍候</view></view></view>
       <view class="scroll-space"></view>
     </view>
   </scroll-view>

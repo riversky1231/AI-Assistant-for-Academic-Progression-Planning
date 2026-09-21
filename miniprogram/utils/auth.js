@@ -1,5 +1,5 @@
 const storage = require('./storage');
-const TABS = ['/pages/home/index', '/pages/schools/index', '/pages/recommend/index', '/pages/mine/index'];
+const TABS = ['/pages/home/index', '/pages/schools/index', '/pages/chat/index', '/pages/recommend/index', '/pages/mine/index'];
 let redirecting = false;
 
 function session() { return storage.read('session', null); }
@@ -26,14 +26,14 @@ function requireLogin() {
 }
 function finishLogin(next) {
   const path = (next || '').split('?')[0];
-  if (TABS.includes(path)) { wx.switchTab({ url: path }); return; }
-  if (next === '/pages/chat/index') { wx.redirectTo({ url: next }); return; }
+  if (TABS.includes(next)) { wx.switchTab({ url: path }); return; }
+
   if (path === '/pages/school-detail/index' && /^\/pages\/school-detail\/index\?id=\d+$/.test(next)) {
     wx.redirectTo({ url: next }); return;
   }
   wx.switchTab({ url: TABS[0] });
 }
 function selectTab(page, selected) {
-  if (typeof page.getTabBar === 'function' && page.getTabBar()) page.getTabBar().setData({ selected });
+  if (typeof page.getTabBar === 'function' && page.getTabBar()) page.getTabBar().setData({ selected, keyboardOpen: false });
 }
 module.exports = { session, login, requireLogin, finishLogin, selectTab };

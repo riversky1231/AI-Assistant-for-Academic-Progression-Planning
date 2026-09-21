@@ -4,7 +4,7 @@ const storage = require('../../utils/storage');
 const { number } = require('../../utils/planning');
 Page({
   data: { loggedIn: false, username: '', account: null, profile: null, hasResult: false, loading: false, savingAccount: false, changingPassword: false, users: [], usersOpen: false, managing: false, error: '', permissions: [], roles: [], healthText: '', checking: false, loggingOut: false, accountForm: { nickname: '', phone: '', email: '' }, passwordForm: { oldPassword: '', newPassword: '' } },
-  onShow() { auth.selectTab(this, 3); this.refresh(); },
+  onShow() { auth.selectTab(this, 4); this.refresh(); },
   input(event) {
     const group = event.currentTarget.dataset.group;
     const field = event.currentTarget.dataset.field;
@@ -38,7 +38,7 @@ Page({
   login() { auth.login('/pages/mine/index'); },
   plan() { wx.switchTab({ url: '/pages/recommend/index' }); },
   results() { wx.navigateTo({ url: '/pages/results/index' }); },
-  chat() { wx.navigateTo({ url: '/pages/chat/index' }); },
+  chat() { wx.switchTab({ url: '/pages/chat/index' }); },
   async health() {
     if (this.data.checking) return;
     this.setData({ checking: true, healthText: '' });
@@ -101,7 +101,7 @@ Page({
       finally { this.setData({ managing: false }); }
     } });
   },
-  about() { wx.showModal({ title: '关于向远', content: '向远是一款升学规划助手，帮助你了解院校、专业和历史录取信息。冲稳保按同省同科类历史位次差分类，使用本地演示数据，不承诺录取结果。考生档案与最近推荐仅保存在本机，退出账号后清除。', showCancel: false, confirmColor: '#244c3b' }); },
+  about() { wx.showModal({ title: '关于雪乐兹', content: '雪乐兹是一款升学规划助手，帮助你了解院校、专业和历史录取信息。冲稳保按同省同科类历史位次差分类，使用本地演示数据，不承诺录取结果。考生档案与最近推荐仅保存在本机，退出账号后清除。', showCancel: false, confirmColor: '#244c3b' }); },
   logout() {
     if (this.data.loggingOut) return;
     wx.showModal({ title: '退出当前账号？', content: '将清除本机的考生档案和最近推荐，重新登录后需要再次填写。', confirmText: '退出登录', confirmColor: '#244c3b', success: async result => {

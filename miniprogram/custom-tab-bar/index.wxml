@@ -1,4 +1,4 @@
-<view class="tabbar">
+<view wx:if="{{!keyboardOpen}}" class="tabbar">
   <button wx:for="{{tabs}}" wx:key="path" class="tab {{selected === index ? 'active' : ''}}" data-index="{{index}}" bindtap="switchTab" aria-label="{{item.text}}">
     <view class="icon {{item.icon}}"><view class="part"></view></view>
     <text>{{item.text}}</text><view wx:if="{{selected === index}}" class="dot"></view>

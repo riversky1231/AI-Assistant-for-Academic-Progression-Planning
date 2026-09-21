@@ -1,7 +1,7 @@
 <view class="page tab-page">
   <view class="between welcome"><text class="eyebrow">YOUR NEXT CHAPTER</text><view class="brand-dot">为热爱，选未来</view></view>
   <view class="hero">
-    <view class="hero-tag">向远 · 升学规划</view>
+    <view class="hero-tag">雪乐兹 · 升学规划</view>
     <view class="hero-title"><view>每一个选择，</view><view>都通向更远的你。</view></view>
     <view class="hero-description">从了解自己开始，找到适合的大学与专业。</view>
     <button class="hero-button" bindtap="plan">开启我的升学规划 <text>↗</text></button>
@@ -17,7 +17,7 @@
       <view class="entry entry-cream" bindtap="plan" role="button"><view class="entry-top"><text class="entry-icon">◎</text><text>↗</text></view><view class="entry-title">我的志愿方向</view><view class="entry-desc">冲一冲 · 稳一稳 · 保一保</view></view>
     </view>
   </view>
-  <button class="consult-entry section" bindtap="chat"><view class="consult-symbol">✦</view><view class="consult-copy"><view class="consult-kicker">向远 AI · 智能咨询</view><view class="consult-title">选择有疑问？一起聊聊。</view><view class="consult-description">从学校与专业，到你关心的未来</view></view><text class="consult-arrow">↗</text></button>
+  <button class="consult-entry section" bindtap="chat"><view class="consult-symbol">✦</view><view class="consult-copy"><view class="consult-kicker">雪乐兹 AI · 智能咨询</view><view class="consult-title">选择有疑问？一起聊聊。</view><view class="consult-description">从学校与专业，到你关心的未来</view></view><text class="consult-arrow">↗</text></button>
   <view class="section"><view class="section-head"><text class="section-title">逛逛院校库</text><button class="text-button" bindtap="schools">查看全部 ↗</button></view>
     <state-card wx:if="{{!loggedIn}}" title="你的大学探索之旅" description="登录后，查看院校、专业与历史录取信息" action="登录并探索" bindretry="login" />
     <state-card wx:elif="{{loading}}" loading />

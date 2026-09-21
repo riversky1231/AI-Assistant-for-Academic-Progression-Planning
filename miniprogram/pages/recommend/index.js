@@ -5,7 +5,7 @@ const { provinces, emptyProfile, payload } = require('../../utils/planning');
 Page({
   data: { provinces, provinceIndex: 0, form: emptyProfile(), busy: false, error: '', loggedIn: false, regions: ['不限', '福建', '江浙沪', '北京', '广东'] },
   onShow() {
-    auth.selectTab(this, 2);
+    auth.selectTab(this, 3);
     const account = auth.session();
     const token = account ? account.tokenValue : '';
     if (this._token !== token) {

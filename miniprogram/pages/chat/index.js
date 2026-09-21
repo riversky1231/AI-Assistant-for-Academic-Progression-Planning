@@ -14,6 +14,7 @@ Page({
   },
   onLoad(options) { this.fromResults = options && options.from === 'results'; },
   onShow() {
+    auth.selectTab(this, 2);
     this._unloaded = false;
     const account = auth.session();
     this._state = consultation.forAccount(account && account.tokenValue);
@@ -30,7 +31,7 @@ Page({
     this.render();
   },
   onUnload() { this._unloaded = true; if (this._unsubscribe) this._unsubscribe(); },
-  onHide() { if (this._unsubscribe) this._unsubscribe(); this.setData({ keyboardHeight: 0 }); },
+  onHide() { if (this._unsubscribe) this._unsubscribe(); this.updateKeyboard(0); },
   render() {
     if (this._unloaded) return;
     const state = this._state;
@@ -130,8 +131,13 @@ Page({
     const message = this._state.messages.find(item => item.id === event.currentTarget.dataset.id);
     if (message) wx.setClipboardData({ data: message.text });
   },
-  keyboard(event) { this.setData({ keyboardHeight: Math.max(0, Number(event.detail.height) || 0) }); },
-  blur() { this.setData({ keyboardHeight: 0 }); },
+  updateKeyboard(height) {
+    this.setData({ keyboardHeight: height });
+    const tabBar = typeof this.getTabBar === 'function' && this.getTabBar();
+    if (tabBar) tabBar.setData({ keyboardOpen: height > 0 });
+  },
+  keyboard(event) { this.updateKeyboard(Math.max(0, Number(event.detail.height) || 0)); },
+  blur() { this.updateKeyboard(0); },
   login() { auth.login('/pages/chat/index'); },
   plan() { wx.switchTab({ url: '/pages/recommend/index' }); }
 });

@@ -26,6 +26,54 @@ const planning = require('../miniprogram/utils/planning');
 const consultation = require('../miniprogram/utils/consultation');
 beforeEach(() => consultation.clear());
 const account = () => storage.write('session', { tokenName: 'satoken', tokenValue: 'test-token', username: 'student' });
+
+test('chat occupies the middle tab and all consultation entries use tab navigation', () => {
+  const config = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'));
+  assert.equal(config.tabBar.list.length, 5);
+  assert.equal(config.tabBar.list[2].pagePath, 'pages/chat/index');
+  wx.navigateTo = wx.redirectTo = () => assert.fail('Chat must use switchTab');
+  for (const name of ['home', 'mine', 'results', 'chat-sources']) {
+    page(name).chat();
+    assert.equal(navigation.at(-1), '/pages/chat/index');
+  }
+  auth.finishLogin('/pages/chat/index');
+  assert.equal(navigation.at(-1), '/pages/chat/index');
+});
+
+test('results tab entry transfers the snapshot and preserves existing or busy drafts', () => {
+  account();
+  storage.write('result', { profile: validForm() });
+  const results = page('results');
+  results.chat();
+  const chat = page('chat');
+  chat.onShow();
+  assert.equal(chat.data.draft, consultation.profilePrompt(validForm()));
+  const state = consultation.forAccount('test-token');
+  state.draft = 'Keep my question';
+  results.chat(); chat.onShow();
+  assert.equal(chat.data.draft, 'Keep my question');
+  state.draft = ''; state.busy = true;
+  results.chat(); chat.onShow();
+  assert.equal(chat.data.draft, '');
+  assert.equal(requests.length, 0);
+});
+
+test('chat selects the center tab and restores navigation after keyboard or page dismissal', () => {
+  const tab = { data: {}, setData(values) { Object.assign(this.data, values); } };
+  const chat = page('chat');
+  chat.getTabBar = () => tab;
+  chat.onShow();
+  assert.equal(tab.data.selected, 2);
+  chat.keyboard({ detail: { height: 300 } });
+  assert.equal(chat.data.keyboardHeight, 300);
+  assert.equal(tab.data.keyboardOpen, true);
+  chat.blur();
+  assert.equal(tab.data.keyboardOpen, false);
+  chat.keyboard({ detail: { height: 300 } });
+  chat.onHide();
+  assert.equal(chat.data.keyboardHeight, 0);
+  assert.equal(tab.data.keyboardOpen, false);
+});
 const respond = (index, data, statusCode = 200) => requests[index].success({ statusCode, data });
 const validForm = () => ({ province: '福建', subject_type: '物理类', score: '580', rank: '15000', major_preference: '计算机', region_preference: '江浙沪' });
 function page(name) {

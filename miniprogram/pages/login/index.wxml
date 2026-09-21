@@ -1,8 +1,8 @@
 <view class="page login-page">
-  <view class="login-brand"><view class="logo">远<view class="logo-star">✦</view></view><view class="brand-caption">向远 · 升学规划</view></view>
+  <view class="login-brand"><view class="logo">雪<view class="logo-star">✦</view></view><view class="brand-caption">雪乐兹 · 升学规划</view></view>
   <text class="eyebrow">A NEW CHAPTER BEGINS</text>
   <view class="title">你好，未来的自己</view>
-  <view class="subtitle">登录向远，让每一步选择都有方向</view>
+  <view class="subtitle">登录雪乐兹，让每一步选择都有方向</view>
   <view class="card login-form">
     <view class="mode-tabs"><button class="{{mode === 'login' ? 'active' : ''}}" data-mode="login" bindtap="mode">登录</button><button class="{{mode === 'register' ? 'active' : ''}}" data-mode="register" bindtap="mode">注册</button></view>
     <view class="field"><text class="label">账号</text><input class="input" value="{{username}}" data-field="username" bindinput="input" maxlength="50" placeholder="请输入账号" placeholder-class="placeholder" disabled="{{busy}}" /></view>

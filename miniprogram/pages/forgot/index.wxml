@@ -1,5 +1,5 @@
 <view class="page forgot-page">
-  <view class="login-brand"><view class="logo">远<view class="logo-star">✦</view></view><view class="brand-caption">向远 · 升学规划</view></view>
+  <view class="login-brand"><view class="logo">雪<view class="logo-star">✦</view></view><view class="brand-caption">雪乐兹 · 升学规划</view></view>
   <text class="eyebrow">ACCOUNT RECOVERY</text>
   <view class="title">找回密码</view>
   <view class="subtitle">验证绑定信息，重新设置登录密码</view>

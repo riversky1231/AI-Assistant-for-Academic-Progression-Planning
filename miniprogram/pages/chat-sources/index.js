@@ -23,6 +23,6 @@ Page({
   chat() {
     const pages = getCurrentPages();
     if (pages.length > 1 && pages[pages.length - 2].route === 'pages/chat/index') wx.navigateBack();
-    else wx.redirectTo({ url: '/pages/chat/index' });
+    else wx.switchTab({ url: '/pages/chat/index' });
   }
 });
