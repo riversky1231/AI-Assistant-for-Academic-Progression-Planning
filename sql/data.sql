@@ -1,4 +1,6 @@
 SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+SET COLLATION_CONNECTION = utf8mb4_0900_ai_ci;
 
 INSERT IGNORE INTO school (id, name, province, city, level, description) VALUES
     (1, '厦门大学', '福建', '厦门', '985', '综合性研究型大学。'),
