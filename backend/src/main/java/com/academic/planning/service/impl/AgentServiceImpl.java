@@ -13,11 +13,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Validator;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Service
 public class AgentServiceImpl implements AgentService {
+    private static final Logger log = LoggerFactory.getLogger(AgentServiceImpl.class);
+    private static final int MAX_LLM_ROUNDS = 3;
+    private static final int MAX_TOOL_CALLS = 6;
+    private static final int MAX_TOOL_CONTEXT_BYTES = 48 * 1024;
+    private static final int MAX_SINGLE_TOOL_CONTEXT_BYTES = 24 * 1024;
     private static final String SYSTEM = """
             你是升学规划助手。使用中文。院校、专业、录取数据和冲稳保结果必须先调用工具查询，
             不得编造数据或修改工具的分类，不得保证录取。说明历史年份与演示数据局限。
@@ -64,9 +72,17 @@ public class AgentServiceImpl implements AgentService {
         messages.addAll(history);
         messages.add(mapper.valueToTree(Map.of("role", "user", "content", request.message())));
         int calls = 0;
+        int toolContextBytes = 0;
         Set<String> callIds = new HashSet<>();
-        for (int round = 0; round < 4; round++) {
-            JsonNode message = llm.complete(messages, tools);
+        for (int round = 0; round < MAX_LLM_ROUNDS; round++) {
+            boolean finalAnswer = round == MAX_LLM_ROUNDS - 1 || calls >= MAX_TOOL_CALLS
+                    || toolContextBytes >= MAX_TOOL_CONTEXT_BYTES - 2048;
+            if (finalAnswer) {
+                log.info("Agent final answer: round={}, toolCalls={}, toolContextBytes={}", round + 1, calls, toolContextBytes);
+                messages.add(mapper.valueToTree(Map.of("role", "system", "content",
+                        "本轮查询已结束。请根据已有工具结果直接回答；明确说明未查询或缺失的数据，不得编造。需要更多资料时请用户补充条件。")));
+            }
+            JsonNode message = llm.complete(messages, finalAnswer ? mapper.createArrayNode() : tools);
             JsonNode pending = message.path("tool_calls");
             if (!pending.isMissingNode() && !pending.isNull() && !pending.isArray()) {
                 throw invalidResponse();
@@ -81,8 +97,8 @@ public class AgentServiceImpl implements AgentService {
                         new AgentChatResponse.SkillUsage(SkillLoader.NAME, SkillLoader.ENTRY, true,
                                 skill.instructionsSha256(), resourcesRead));
             }
-            if (round == 3 || calls + pending.size() > 6) {
-                throw new BusinessException(HttpStatus.BAD_GATEWAY, "模型工具调用超出限制，请缩小问题范围");
+            if (finalAnswer || pending.size() > MAX_TOOL_CALLS) {
+                throw new BusinessException(HttpStatus.BAD_GATEWAY, "模型未遵守工具调用约束");
             }
             // Preserve provider fields (including reasoning_content) for tool continuation.
             messages.add(message);
@@ -92,14 +108,43 @@ public class AgentServiceImpl implements AgentService {
                     throw invalidResponse();
                 }
                 String name = call.path("function").path("name").asText();
+                if (calls >= MAX_TOOL_CALLS || toolContextBytes >= MAX_TOOL_CONTEXT_BYTES - 2048) {
+                    // Complete every pending tool exchange, without executing queries beyond the budget.
+                    String skipped = "{\"status\":\"not_executed\",\"message\":\"Query budget exhausted; answer from existing results.\"}";
+                    messages.add(mapper.valueToTree(Map.of("role", "tool", "tool_call_id", id, "content", skipped)));
+                    toolContextBytes += skipped.getBytes(StandardCharsets.UTF_8).length;
+                    continue;
+                }
                 Object result = execute(name, call.path("function").path("arguments"), user);
                 sources.add(new ToolResult(name, result));
+                String toolContent = modelToolContent(name, result, toolContextBytes);
+                toolContextBytes += toolContent.getBytes(StandardCharsets.UTF_8).length;
                 messages.add(mapper.valueToTree(Map.of("role", "tool", "tool_call_id", id,
-                        "content", mapper.valueToTree(result).toString())));
+                        "content", toolContent)));
                 calls++;
             }
         }
         throw invalidResponse();
+    }
+
+    private String modelToolContent(String name, Object result, int usedBytes) {
+        String serialized = mapper.valueToTree(result).toString();
+        int rawBytes = serialized.getBytes(StandardCharsets.UTF_8).length;
+        // Reserve room for omission notices and skipped calls in the same batch.
+        int availableBytes = Math.min(MAX_SINGLE_TOOL_CONTEXT_BYTES, MAX_TOOL_CONTEXT_BYTES - usedBytes - 2048);
+        if (rawBytes <= availableBytes) {
+            log.info("Agent tool result: tool={}, resultBytes={}, contextBytes={}, truncated=false", name, rawBytes, rawBytes);
+            return serialized;
+        }
+        String summary = mapper.valueToTree(Map.of(
+                "truncated", true,
+                "tool", name,
+                "original_bytes", rawBytes,
+                "message", "Tool result was omitted because it exceeds the model context budget. Ask for a narrower query."
+        )).toString();
+        log.warn("Agent tool result truncated: tool={}, resultBytes={}, availableContextBytes={}, contextBytes={}",
+                name, rawBytes, Math.max(availableBytes, 0), summary.getBytes(StandardCharsets.UTF_8).length);
+        return summary;
     }
 
     private Object execute(String name, JsonNode arguments, SessionUser user) {
@@ -123,7 +168,7 @@ public class AgentServiceImpl implements AgentService {
             return switch (name) {
                 case "search_schools" -> schools.list(text(args, "keyword", false, 50),
                         text(args, "province", false, 20), 10);
-                case "school_detail" -> schools.detail(number(args, "school_id", 1, Long.MAX_VALUE));
+                case "school_detail" -> schools.agentDetail(number(args, "school_id", 1, Long.MAX_VALUE));
                 case "read_skill_resource" -> skill.readResource(text(args, "path", true, 160));
                 default -> {
                     RecommendationRequest request = new RecommendationRequest(

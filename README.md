@@ -138,6 +138,10 @@ mvn spring-boot:run
 
 `LLM_BASE_URL` 为服务商的 API 基础地址，程序追加 `/chat/completions`；是否包含 `/v1` 以服务商文档为准。模型需支持 `tools`、`tool_choice=auto` 和非流式响应。
 
+每次模型调用都会写入 `LLM request`、`LLM response` 与 `LLM usage` 日志：包括短请求 ID、模型名、消息/工具数量、请求字节数、HTTP 状态、耗时，以及服务商返回的 token 与缓存读写用量（若提供）。日志不会记录提问、模型回答或 API Key。一条咨询最多可能触发 3 次模型调用，排查费用时可用相同请求 ID 对照每一轮的 `totalTokens`、`cachedTokens`、`cacheReadTokens` 与 `cacheWriteTokens`。
+
+为防止工具查询结果造成输入费用失控，单个工具结果进入模型上下文前最多保留 24 KB、整条咨询累计最多 48 KB（其中预留 2 KB 用于省略说明）；超限结果会被替换为可识别的截断说明。单次模型请求超过 96 KB 会在发送前被拒绝；每次咨询最多 3 次模型调用、最多 6 次工具调用。达到工具或上下文预算、或进入最后一轮时，以 `tool_choice=none` 要求模型根据已有结果回答；超出剩余额度的工具返回未执行说明，不会继续查询。模型输出上限默认 2048 tokens，可通过 `LLM_MAX_OUTPUT_TOKENS` 调整（1–8192）；此上限不限制输入。`LLM completion` 日志记录结束原因，`finishReason=length` 表示输出截断，接口返回明确错误且不自动重试。Agent 的 `school_detail` 使用独立轻量 SQL：不读取学校或专业描述，仅查询必要字段，且录取明细最多 24 条；面向普通接口的完整院校详情不受该限制。
+
 密钥通过 `System.getenv("LLM_API_KEY")` 显式优先读取当前进程环境变量；未设置时才回退到应用配置。显式设置为空会禁用密钥回退。启动日志显示 `LLM API key: loaded=true, source=process environment LLM_API_KEY`，不输出密钥。修改环境变量后需重新启动后端；从 IDE 启动时，确保运行配置或 IDE 进程已继承该变量。
 
 登录后携带 `satoken` 请求头，向 `POST /agent/chat` 提交：

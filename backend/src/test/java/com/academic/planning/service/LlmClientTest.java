@@ -43,6 +43,12 @@ class LlmClientTest {
             assertEquals("hello", client.complete(List.of(), mapper.createArrayNode()).path("content").asText());
             assertEquals("Bearer test-key", auth.get());
             assertEquals("test-model", mapper.readTree(body.get()).path("model").asText());
+            assertEquals(2048, mapper.readTree(body.get()).path("max_tokens").asInt());
+            assertEquals("none", mapper.readTree(body.get()).path("tool_choice").asText());
+            var customClient = new CompatibleLlmClient(new LlmProperties(true,
+                    "http://127.0.0.1:" + server.getAddress().getPort() + "/v1/", "test-key", "test-model", 3, 4096), mapper);
+            customClient.complete(List.of(), mapper.createArrayNode());
+            assertEquals(4096, mapper.readTree(body.get()).path("max_tokens").asInt());
             status.set(401);
             BusinessException error = assertThrows(BusinessException.class,
                     () -> client.complete(List.of(), mapper.createArrayNode()));
@@ -51,6 +57,13 @@ class LlmClientTest {
         } finally {
             server.stop(0);
         }
+    }
+
+    @Test void rejectsOversizedRequestBeforeCallingProvider() {
+        var client = new CompatibleLlmClient(new LlmProperties(true, "http://127.0.0.1:1", "test-key", "test-model", 3), mapper);
+        var message = mapper.createObjectNode().put("role", "user").put("content", "x".repeat(100_000));
+        assertEquals(413, assertThrows(BusinessException.class,
+                () -> client.complete(List.of(message), mapper.createArrayNode())).getStatus().value());
     }
 
     @Test void rejectsTruncatedMalformedAndUnexpectedResponses() throws Exception {
@@ -75,6 +88,9 @@ class LlmClientTest {
                         () -> client.complete(List.of(), mapper.createArrayNode()));
                 assertEquals(502, error.getStatus().value());
                 assertFalse(error.getMessage().contains("private upstream"));
+                if (body.contains("\"finish_reason\":\"length\"")) {
+                    assertTrue(error.getMessage().contains("输出达到长度上限"));
+                }
             }
         } finally {
             server.stop(0);

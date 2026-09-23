@@ -120,11 +120,38 @@ class AgentServiceTest {
         verify(schools).list("厦门", null, 10);
     }
 
+    @Test void replacesOversizedToolResultBeforeTheNextModelCall() throws Exception {
+        when(schools.list("厦门", null, 10)).thenReturn(List.of(
+                new com.academic.planning.vo.SchoolSummaryVO(1L, "厦门测试大学", "福建", "厦门", "本科", "x".repeat(30_000))));
+        when(llm.complete(anyList(), any())).thenReturn(call("search_schools", "{\"keyword\":\"厦门\"}"))
+                .thenAnswer(invocation -> {
+                    List<com.fasterxml.jackson.databind.JsonNode> messages = invocation.getArgument(0);
+                    var result = mapper.readTree(messages.get(3).path("content").asText());
+                    assertTrue(result.path("truncated").asBoolean());
+                    assertEquals("search_schools", result.path("tool").asText());
+                    return mapper.valueToTree(Map.of("role", "assistant", "content", "请缩小查询范围。"));
+                });
+
+        service().chat(new AgentChatRequest("查询厦门学校"), user);
+    }
+
     @Test void checksToolPermissionBeforeQuery() {
         when(llm.complete(anyList(), any())).thenReturn(call("school_detail", "{\"school_id\":1}"));
         var limited = new SessionUser(1, "token", List.of("recommend:use"), List.of());
         assertThrows(AuthException.class, () -> service().chat(new AgentChatRequest("查学校"), limited));
         verifyNoInteractions(schools);
+    }
+
+    @Test void usesCompactSchoolDetailProjectionForTheModelTool() {
+        var detail = new com.academic.planning.vo.AgentSchoolDetailVO(1L, "测试大学", "福建", "厦门", "本科", List.of());
+        when(schools.agentDetail(1L)).thenReturn(detail);
+        when(llm.complete(anyList(), any())).thenReturn(call("school_detail", "{\"school_id\":1}"))
+                .thenReturn(mapper.valueToTree(Map.of("role", "assistant", "content", "已查询。")));
+
+        var result = service().chat(new AgentChatRequest("查询学校详情"), user);
+        assertSame(detail, result.sources().get(0).data());
+        verify(schools).agentDetail(1L);
+        verify(schools, never()).detail(anyLong());
     }
 
     @Test void rejectsMissingRankInsteadOfInventingDefault() {
@@ -151,8 +178,29 @@ class AgentServiceTest {
             return result;
         });
         assertThrows(BusinessException.class, () -> service().chat(new AgentChatRequest("查询"), user));
-        verify(llm, times(4)).complete(anyList(), any());
-        verify(schools, times(3)).list(null, null, 10);
+        verify(llm, times(3)).complete(anyList(), any());
+        verify(schools, times(2)).list(null, null, 10);
+    }
+
+    @Test void completesParallelQueriesThenDisablesToolsAtBudget() {
+        var batch = mapper.createObjectNode().put("role", "assistant");
+        var pending = batch.putArray("tool_calls");
+        for (int i = 0; i < 6; i++) {
+            var item = call("search_schools", "{}").path("tool_calls").get(0).deepCopy();
+            ((com.fasterxml.jackson.databind.node.ObjectNode) item).put("id", "batch_" + i);
+            pending.add(item);
+        }
+        when(schools.list(null, null, 10)).thenReturn(List.of());
+        when(llm.complete(anyList(), any())).thenReturn(batch).thenAnswer(invocation -> {
+            com.fasterxml.jackson.databind.JsonNode definitions = invocation.getArgument(1);
+            assertTrue(definitions.isEmpty());
+            List<com.fasterxml.jackson.databind.JsonNode> messages = invocation.getArgument(0);
+            assertEquals(6, messages.stream().filter(m -> "tool".equals(m.path("role").asText())).count());
+            return mapper.valueToTree(Map.of("role", "assistant", "content", "没有匹配数据。"));
+        });
+        assertEquals("没有匹配数据。", service().chat(new AgentChatRequest("查询"), user).answer());
+        verify(schools, times(6)).list(null, null, 10);
+        verify(llm, times(2)).complete(anyList(), any());
     }
 
     @Test void passesValidatedRecommendationToServiceAndKeepsProviderContinuationFields() {
