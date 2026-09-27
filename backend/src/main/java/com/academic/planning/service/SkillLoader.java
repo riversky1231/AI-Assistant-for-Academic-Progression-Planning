@@ -30,8 +30,10 @@ public class SkillLoader {
 
     public SkillLoader(ObjectMapper mapper) {
         try {
+            // 读入口 SKILL.md 并剥离 YAML frontmatter，得到纯指令正文
             String entry = read("SKILL.md").replaceFirst("(?s)^---\\R.*?\\R---\\R", "").strip();
             if (entry.isBlank()) throw new IOException("Empty skill entry");
+            // 读资源白名单索引，限制数量（1~16 条）
             var index = mapper.readTree(read("resource-index.json"));
             if (!index.isArray() || index.isEmpty() || index.size() > 16) {
                 throw new IOException("Invalid skill resource index");
@@ -41,6 +43,7 @@ public class SkillLoader {
             for (var item : index) {
                 String path = item.path("path").asText();
                 String description = item.path("description").asText();
+                // 路径必须严格落在 references/research 或 examples 下的 .md，防止越权读任意文件
                 if (!path.matches("(?:references/research|examples)/[a-zA-Z0-9_-]+\\.md")
                         || description.isBlank() || loaded.containsKey(path)) {
                     throw new IOException("Invalid skill resource entry");
@@ -49,12 +52,14 @@ public class SkillLoader {
                 catalog.append("- ").append(path).append("：").append(description).append('\n');
             }
             resources = Collections.unmodifiableMap(loaded);
+            // 最终指令 = 入口正文 + 资料目录；哈希用于部署版本核对
             instructions = entry + catalog;
             instructionsSha256 = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(instructions.getBytes(StandardCharsets.UTF_8)));
             log.info("Fixed skill loaded: name={}, entry={}, instructionsSha256={}, resourceCount={}",
                     NAME, ENTRY, instructionsSha256, resources.size());
         } catch (IOException | NoSuchAlgorithmException exception) {
+            // 必需文件缺失/非法会导致启动失败，保证 Skill 始终可用
             throw new IllegalStateException("Cannot load required zhangxuefeng skill", exception);
         }
     }

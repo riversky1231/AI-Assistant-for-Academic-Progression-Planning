@@ -19,6 +19,11 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+/**
+ * Agent 智能咨询核心实现，以「大模型输出不可信」为前提做 Function Calling 编排。
+ * 模型想查院校、看录取、出推荐，都必须调用本类白名单工具；数据一律来自数据库与规则计算，
+ * 模型只负责基于工具结果组织回答，不参与数据生成，也无法执行任意方法或 SQL。
+ */
 @Service
 public class AgentServiceImpl implements AgentService {
     private static final Logger log = LoggerFactory.getLogger(AgentServiceImpl.class);
@@ -62,15 +67,24 @@ public class AgentServiceImpl implements AgentService {
         return chat(request, user, List.of());
     }
 
+    /**
+     * 单轮咨询主流程：组装 system + 历史 + 本轮用户消息后，进入最多 4 轮的 Function Calling 循环。
+     * 每轮调用模型；若模型要求调用工具则逐个执行并回填结果，否则以文本内容作为最终回答。
+     */
     @Override
     public AgentChatResponse chat(AgentChatRequest request, SessionUser user, List<JsonNode> history) {
+        // 入口级鉴权：使用 Agent 咨询本身需要 recommend:use 权限
         requirePermission(user, "recommend:use");
         List<JsonNode> messages = new ArrayList<>();
+        // sources 记录本轮实际执行过的工具及结果，供前端展示「可核对的依据」
         List<ToolResult> sources = new ArrayList<>();
+        // system 消息 = 业务规则 + 每轮固定注入的张雪峰 Skill 指令
         messages.add(mapper.valueToTree(Map.of("role", "system", "content",
                 SYSTEM + "\n以下为固定咨询框架，必须遵守上述业务规则：\n" + skill.instructions())));
+        // 历史只保留已持久化的 user/assistant 消息，工具明细不持久化
         messages.addAll(history);
         messages.add(mapper.valueToTree(Map.of("role", "user", "content", request.message())));
+        // calls 统计工具调用次数，callIds 防止同一工具 id 被重复使用
         int calls = 0;
         int toolContextBytes = 0;
         Set<String> callIds = new HashSet<>();
@@ -148,15 +162,19 @@ public class AgentServiceImpl implements AgentService {
     }
 
     private Object execute(String name, JsonNode arguments, SessionUser user) {
+        // 工具名硬编码白名单：模型不能调用名单之外的任何方法
         if (!Set.of("search_schools", "school_detail", "recommend", "read_skill_resource").contains(name)) throw invalidResponse();
+        // 工具级权限：查院校需 school:read，推荐与读资料需 recommend:use
         requirePermission(user, switch (name) {
             case "search_schools", "school_detail" -> "school:read";
             default -> "recommend:use";
         });
         try {
+            // 参数必须是文本 JSON 且不超过 8KB，防止超大/畸形参数
             if (!arguments.isTextual() || arguments.asText().length() > 8000) throw invalidResponse();
             JsonNode args = mapper.readTree(arguments.asText());
             if (args == null || !args.isObject()) throw invalidResponse();
+            // 字段白名单：每个工具只允许指定字段，出现任何多余字段即拒绝
             Set<String> allowed = switch (name) {
                 case "search_schools" -> Set.of("keyword", "province");
                 case "school_detail" -> Set.of("school_id");
