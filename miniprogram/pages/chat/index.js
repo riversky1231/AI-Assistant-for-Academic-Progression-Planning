@@ -58,6 +58,7 @@ Page({
     if (!this._state.expired) this._state.error = '';
     this.render();
   },
+  // 一键把考生档案拼进提问草稿（若已含则跳过，避免重复拼接）
   useProfile() {
     if (!auth.session()) { this.login(); return; }
     if (!this._state || this._state.busy) return;
@@ -70,33 +71,41 @@ Page({
     if (!this._state.expired) this._state.error = '';
     this.render();
   },
+  // 发送咨询：乐观插入用户消息 → 调接口 → 校验响应 → 插入回复；失败回滚草稿并给提示
   async send() {
     if (!auth.requireLogin()) return;
     const account = auth.session();
     const state = this._state;
+    // 状态守卫：会话必须属于当前账户，且非忙碌、未过期
     if (!consultation.isCurrent(state) || state.owner !== account.tokenValue || state.busy || state.expired) return;
     const message = state.draft.trim();
+    // 非空且不超过 4000 字
     if (!message || message.length > 4000) {
       state.error = !message ? '先写下你想了解的问题吧。' : '问题最多 4000 字，请精简后再发送。'; this.render(); return;
     }
     const payload = { message };
+    // 有会话 id 则续聊，否则后端开新会话
     if (state.conversationId) payload.conversation_id = state.conversationId;
     const pendingId = consultation.nextId();
+    // 乐观插入用户消息，立即置忙碌、清空草稿
     state.messages.push({ id: pendingId, role: 'user', text: message });
     state.busy = true; state.error = ''; state.draft = '';
     this.render();
     try {
       const result = await api.chat(payload);
       if (!this.owns(state)) return;
+      // 响应完整性校验：answer 非空、conversation_id 必须是标准 UUID
       if (!result || typeof result.answer !== 'string' || !result.answer.trim() ||
           !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(result.conversation_id || '')) {
         throw new Error('咨询返回内容不完整，请稍后重试。');
       }
+      // 记录会话 id 供下次续聊，插入助手回复，最多保留 16 条
       state.conversationId = result.conversation_id;
       state.messages.push({ id: consultation.nextId(), role: 'assistant', text: result.answer, sources: Array.isArray(result.sources) ? result.sources : [] });
       state.messages = state.messages.slice(-16);
     } catch (error) {
       if (!this.owns(state)) return;
+      // 失败：移除乐观插入的用户消息，把问题还原回草稿，按错误码给提示
       state.messages = state.messages.filter(item => item.id !== pendingId);
       state.draft = message;
       const failure = consultation.chatError(error);

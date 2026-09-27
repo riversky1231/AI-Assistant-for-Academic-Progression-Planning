@@ -16,9 +16,14 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.util.List;
 
+/**
+ * 院校查询核心实现：列表按关键词/省份筛选，详情关联专业与历史录取。
+ * 详情结果缓存 10 分钟，避免频繁查库。
+ */
 @Service
 public class SchoolServiceImpl implements SchoolService {
 
+    // 详情缓存时长
     private static final Duration CACHE_TTL = Duration.ofMinutes(10);
     private final SchoolMapper schoolMapper;
     private final RedisCacheService cacheService;
@@ -35,11 +40,13 @@ public class SchoolServiceImpl implements SchoolService {
 
     public SchoolDetailVO detail(long schoolId) {
         String cacheKey = "academic:school:" + schoolId;
+        // 命中缓存直接返回；否则查库并回填缓存
         return cacheService.get(cacheKey, SchoolDetailVO.class).orElseGet(() -> {
             School school = schoolMapper.selectById(schoolId);
             if (school == null) {
                 throw new BusinessException(HttpStatus.NOT_FOUND, "未找到该院校");
             }
+            // 关联查询该院校各专业的录取详情（按年份倒序）
             List<AdmissionVO> admissions = schoolMapper.selectAdmissionDetails(schoolId)
                     .stream().map(this::toAdmission).toList();
             SchoolDetailVO detail = new SchoolDetailVO(

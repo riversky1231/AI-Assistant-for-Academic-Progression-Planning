@@ -33,11 +33,17 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * 认证与账号管理核心实现：登录/注册/微信登录/找回密码/资料与密码管理。
+ * 安全要点：PBKDF2 慢哈希存密码、登录与找回密码做 Redis 限流、登录成功签发 Redis 会话 token。
+ */
 @Service
 public class AuthServiceImpl implements AuthService {
 
+    // 登录限流：5 分钟窗口最多 10 次，超过返回 429
     private static final int MAX_LOGIN_ATTEMPTS = 10;
     private static final Duration LOGIN_WINDOW = Duration.ofMinutes(5);
+    // 找回密码限流：10 分钟窗口最多 5 次
     private static final int MAX_RESET_ATTEMPTS = 5;
     private static final Duration RESET_WINDOW = Duration.ofMinutes(10);
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -56,6 +62,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     public LoginVO login(LoginRequest request) {
+        // 用 SHA-256(用户名) 作限流键，避免把明文用户名写进 Redis
         String rateLimitKey = "academic:login-attempt:" + sha256(request.username().trim().toLowerCase());
         long attempts;
         try {
@@ -66,12 +73,14 @@ public class AuthServiceImpl implements AuthService {
         if (attempts > MAX_LOGIN_ATTEMPTS) {
             throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS, "登录尝试过多，请稍后再试");
         }
+        // 统一返回「用户名或密码错误」，不区分账号不存在/停用/密码错，避免枚举用户
         SysUser user = findByUsername(request.username());
         if (user == null || !Boolean.TRUE.equals(user.getEnabled())
                 || !passwordHasher.matches(request.password(), user.getPasswordHash())) {
             throw new BusinessException(HttpStatus.UNAUTHORIZED, "用户名或密码错误");
         }
         LoginVO login = createSession(user);
+        // 登录成功后清除该用户的失败计数
         redisGateway.delete(rateLimitKey);
         return login;
     }
@@ -94,11 +103,13 @@ public class AuthServiceImpl implements AuthService {
     }
 
     public LoginVO wechatLogin(WechatLoginRequest request) {
+        // 演示实现：未接真实微信 code2session，用 SHA-256(code) 伪造稳定 openid 标识同一用户
         String openid = "mock_" + sha256(cleanRequired(request.code())).substring(0, 32);
         SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getWechatOpenid, openid)
                 .last("LIMIT 1"));
         if (user == null) {
+            // 首次微信登录自动注册，生成随机用户名与不可登录的随机密码
             user = new SysUser();
             user.setUsername(nextWechatUsername());
             user.setPasswordHash(passwordHasher.hash("wx-" + java.util.UUID.randomUUID()));
@@ -241,6 +252,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private LoginVO createSession(SysUser user) {
+        // 生成随机 UUID 作为会话 token，存入 Redis：academic:session:{token} = userId，TTL 2 小时
         String token = java.util.UUID.randomUUID().toString();
         try {
             redisGateway.set(
@@ -251,6 +263,7 @@ public class AuthServiceImpl implements AuthService {
         } catch (RuntimeException exception) {
             throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE, "登录服务暂不可用");
         }
+        // 返回 token 头名、token、有效期秒数，以及该用户的权限码列表供前端感知角色
         return new LoginVO(
                 AuthInterceptor.TOKEN_HEADER,
                 token,

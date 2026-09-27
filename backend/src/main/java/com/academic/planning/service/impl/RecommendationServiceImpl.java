@@ -21,11 +21,19 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 冲稳保推荐核心实现。
+ * 分类只依据「位次差 = 历史最低位次 − 用户位次」的纯规则计算，分数仅作展示不参与分类；
+ * 结果按位次差绝对值升序、每档最多 5 条，并缓存 5 分钟。
+ */
 @Service
 public class RecommendationServiceImpl implements RecommendationService {
 
+    // 每档最多保留的院校数量
     private static final int CATEGORY_LIMIT = 5;
+    // 推荐结果缓存时长
     private static final Duration CACHE_TTL = Duration.ofMinutes(5);
+    // 地区别名展开：口语化的地区词映射为多个具体省份
     private static final Map<String, List<String>> REGION_ALIASES = Map.of(
             "江浙沪", List.of("江苏", "浙江", "上海"),
             "长三角", List.of("江苏", "浙江", "上海")
@@ -40,9 +48,12 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     public RecommendationResponseVO recommend(RecommendationRequest request) {
+        // 先把「江浙沪/长三角」等别名展开成具体省份，再据此过滤院校
         List<String> regions = expandRegions(request.regionPreference());
+        // 缓存键由请求参数哈希而来，命中即免查库
         String cacheKey = cacheKey(request, regions);
         return cacheService.get(cacheKey, RecommendationResponseVO.class).orElseGet(() -> {
+            // 只取每校每专业「最新年份」的录取数据，保证推荐基于最近一届
             List<RecommendationCandidateRow> candidates = recommendationMapper.selectCandidates(
                     request.province().trim(), request.subjectType().trim(),
                     normalize(request.majorPreference()), regions
@@ -52,7 +63,9 @@ public class RecommendationServiceImpl implements RecommendationService {
             grouped.put("稳", new ArrayList<>());
             grouped.put("保", new ArrayList<>());
             for (RecommendationCandidateRow row : candidates) {
+                // 核心：位次差 = 历史最低位次 − 用户位次，是分档的唯一依据
                 long rankGap = row.getMinRank() - request.rank();
+                // 分数差仅用于展示，不参与冲/稳/保分类
                 int scoreGap = request.score() - row.getMinScore();
                 String category = categoryForGap(rankGap);
                 String reason = "历史最低分 %d、最低位次 %d；您的位次差 %+d 名，按位次判定为“%s”。"
@@ -83,6 +96,10 @@ public class RecommendationServiceImpl implements RecommendationService {
         });
     }
 
+    /**
+     * 冲稳保分档规则：gap = 历史最低位次 − 用户位次。
+     * gap < −2000 → 冲；−2000 ≤ gap ≤ 2000 → 稳；gap > 2000 → 保。
+     */
     public String categoryForGap(long gap) {
         if (gap < -2_000) {
             return "冲";

@@ -16,8 +16,14 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 
+/**
+ * Agent 智能咨询核心实现，以「大模型输出不可信」为前提做 Function Calling 编排。
+ * 模型想查院校、看录取、出推荐，都必须调用本类白名单工具；数据一律来自数据库与规则计算，
+ * 模型只负责基于工具结果组织回答，不参与数据生成，也无法执行任意方法或 SQL。
+ */
 @Service
 public class AgentServiceImpl implements AgentService {
+    // 每轮固定注入的 system 业务规则：强制先查数据再回答、禁止编造与保证录取、防提示注入、限定话题范围
     private static final String SYSTEM = """
             你是升学规划助手。使用中文。院校、专业、录取数据和冲稳保结果必须先调用工具查询，
             不得编造数据或修改工具的分类，不得保证录取。说明历史年份与演示数据局限。
@@ -54,17 +60,27 @@ public class AgentServiceImpl implements AgentService {
         return chat(request, user, List.of());
     }
 
+    /**
+     * 单轮咨询主流程：组装 system + 历史 + 本轮用户消息后，进入最多 4 轮的 Function Calling 循环。
+     * 每轮调用模型；若模型要求调用工具则逐个执行并回填结果，否则以文本内容作为最终回答。
+     */
     @Override
     public AgentChatResponse chat(AgentChatRequest request, SessionUser user, List<JsonNode> history) {
+        // 入口级鉴权：使用 Agent 咨询本身需要 recommend:use 权限
         requirePermission(user, "recommend:use");
         List<JsonNode> messages = new ArrayList<>();
+        // sources 记录本轮实际执行过的工具及结果，供前端展示「可核对的依据」
         List<ToolResult> sources = new ArrayList<>();
+        // system 消息 = 业务规则 + 每轮固定注入的张雪峰 Skill 指令
         messages.add(mapper.valueToTree(Map.of("role", "system", "content",
                 SYSTEM + "\n以下为固定咨询框架，必须遵守上述业务规则：\n" + skill.instructions())));
+        // 历史只保留已持久化的 user/assistant 消息，工具明细不持久化
         messages.addAll(history);
         messages.add(mapper.valueToTree(Map.of("role", "user", "content", request.message())));
+        // calls 统计工具调用次数，callIds 防止同一工具 id 被重复使用
         int calls = 0;
         Set<String> callIds = new HashSet<>();
+        // 最多 4 轮模型请求，避免模型陷入「永远调工具」的死循环
         for (int round = 0; round < 4; round++) {
             JsonNode message = llm.complete(messages, tools);
             JsonNode pending = message.path("tool_calls");
@@ -102,16 +118,24 @@ public class AgentServiceImpl implements AgentService {
         throw invalidResponse();
     }
 
+    /**
+     * 执行模型请求的单个工具调用。安全边界全部在这里收紧：
+     * 工具名白名单、工具级权限、参数 JSON 大小、字段白名单，逐层校验，越界即抛 502。
+     */
     private Object execute(String name, JsonNode arguments, SessionUser user) {
+        // 工具名硬编码白名单：模型不能调用名单之外的任何方法
         if (!Set.of("search_schools", "school_detail", "recommend", "read_skill_resource").contains(name)) throw invalidResponse();
+        // 工具级权限：查院校需 school:read，推荐与读资料需 recommend:use
         requirePermission(user, switch (name) {
             case "search_schools", "school_detail" -> "school:read";
             default -> "recommend:use";
         });
         try {
+            // 参数必须是文本 JSON 且不超过 8KB，防止超大/畸形参数
             if (!arguments.isTextual() || arguments.asText().length() > 8000) throw invalidResponse();
             JsonNode args = mapper.readTree(arguments.asText());
             if (args == null || !args.isObject()) throw invalidResponse();
+            // 字段白名单：每个工具只允许指定字段，出现任何多余字段即拒绝
             Set<String> allowed = switch (name) {
                 case "search_schools" -> Set.of("keyword", "province");
                 case "school_detail" -> Set.of("school_id");
