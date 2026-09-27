@@ -45,6 +45,7 @@ app:
     api-key: ${LLM_API_KEY:}
     model: ${LLM_MODEL:}
     timeout-seconds: ${LLM_TIMEOUT_SECONDS:30}
+    max-output-tokens: ${LLM_MAX_OUTPUT_TOKENS:2048}
   redis:
     host: ${REDIS_HOST:127.0.0.1}
     port: ${REDIS_PORT:6379}

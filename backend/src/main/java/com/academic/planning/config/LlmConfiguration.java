@@ -19,7 +19,8 @@ public class LlmConfiguration {
         return new LlmProperties(environment.getProperty("app.llm.enabled", Boolean.class, false),
                 environment.getProperty("app.llm.base-url", ""), key,
                 environment.getProperty("app.llm.model", ""),
-                environment.getProperty("app.llm.timeout-seconds", Integer.class, 30));
+                environment.getProperty("app.llm.timeout-seconds", Integer.class, 30),
+                environment.getProperty("app.llm.max-output-tokens", Integer.class, 2048));
     }
 
     static String resolveApiKey(String processKey, String configuredKey) {

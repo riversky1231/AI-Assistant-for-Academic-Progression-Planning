@@ -1,6 +1,25 @@
 <view class="answer">
   <view wx:for="{{blocks}}" wx:key="key" class="block {{item.kind}}">
+    <block wx:if="{{item.kind === 'table'}}">
+      <view class="table-hint">左右滑动查看完整表格</view>
+      <scroll-view class="table-scroll" scroll-x="{{true}}">
+        <view class="table-grid" style="width: {{item.width}}rpx;">
+          <view class="table-row table-header">
+            <view wx:for="{{item.header}}" wx:for-item="cell" wx:key="key" class="table-cell align-{{cell.align}}">
+              <text user-select="{{true}}"><text wx:for="{{cell.parts}}" wx:for-item="part" wx:key="key" class="{{part.kind}}">{{part.text}}</text></text>
+            </view>
+          </view>
+          <view wx:for="{{item.rows}}" wx:for-item="row" wx:key="key" class="table-row">
+            <view wx:for="{{row.cells}}" wx:for-item="cell" wx:key="key" class="table-cell align-{{cell.align}}">
+              <text user-select="{{true}}"><text wx:for="{{cell.parts}}" wx:for-item="part" wx:key="key" class="{{part.kind}}">{{part.text}}</text></text>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+    </block>
+    <block wx:else>
     <text wx:if="{{item.kind === 'list'}}" class="bullet">·</text>
     <text class="copy" user-select="{{true}}"><text wx:for="{{item.parts}}" wx:for-item="part" wx:key="key" class="{{part.kind}}">{{part.text}}</text></text>
+    </block>
   </view>
 </view>

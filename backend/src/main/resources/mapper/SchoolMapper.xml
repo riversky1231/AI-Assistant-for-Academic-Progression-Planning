@@ -32,4 +32,25 @@
         WHERE a.school_id = #{schoolId}
         ORDER BY a.year DESC, a.subject_type, m.name
     </select>
+
+    <select id="selectAgentSchool" resultType="com.academic.planning.mapper.row.AgentSchoolRow">
+        SELECT id, name, province, city, level
+        FROM school
+        WHERE id = #{schoolId}
+    </select>
+
+    <select id="selectAgentAdmissionDetails" resultType="com.academic.planning.mapper.row.AgentAdmissionRow">
+        SELECT a.province,
+               a.subject_type,
+               a.year,
+               a.min_score,
+               a.min_rank,
+               m.name AS major_name,
+               m.category
+        FROM admission a
+        JOIN major m ON m.id = a.major_id AND m.school_id = a.school_id
+        WHERE a.school_id = #{schoolId}
+        ORDER BY a.year DESC, a.subject_type, m.name
+        LIMIT 24
+    </select>
 </mapper>

@@ -15,7 +15,23 @@
 
 微信小程序 AppID：`wx8ab1f880d51cff5f`。
 
+## 服务器地址
+
+当前服务器公网 IP：`47.114.33.144`，项目部署目录：`/opt/xuelezi`。
+
+从连接服务器、打包上传到开启模型、日常更新和故障排查，见 [服务器操作教程](docs/server-guide.md)。
+
+| 用途 | 地址 |
+|---|---|
+| 后端 API 基础地址 | `http://47.114.33.144:8080` |
+| 健康检查 | [http://47.114.33.144:8080/health](http://47.114.33.144:8080/health) |
+| Swagger 接口文档 | [http://47.114.33.144:8080/swagger-ui.html](http://47.114.33.144:8080/swagger-ui.html) |
+
+小程序开发及真机调试时，将 `miniprogram/config/api.js` 的 `develop` 地址设为 `http://47.114.33.144:8080`。当前为 HTTP 联调地址；体验版和正式版应配置 HTTPS 域名及对应的 request 合法域名。
+
 ## 1. 初始化环境
+
+服务器部署可直接使用 [Docker 部署指南](docs/docker-deployment.md)：根目录已提供 `Dockerfile`、`compose.yaml` 和 `.env.docker.example`，一次启动后端、MySQL 和 Redis，无需单独安装 Java 或数据库。以下为不使用 Docker 的本地启动方式。
 
 先创建数据库：
 
@@ -35,6 +51,8 @@ $env:REDIS_PORT = "6379"
 ```
 
 从 `backend` 启动时会执行上级 `sql/schema.sql` 和 `sql/data.sql`，导入 18 所学校、54 个专业，以及福建物理类和其他省份物理类/历史类的 2025 年演示数据。已有数据库请先核对初始化脚本是否适用于当前数据；推荐数据均须与当年官方信息核验。
+
+新账号（注册、首次微信登录、管理员创建）默认获得普通用户角色，包含院校查询 `school:read` 和志愿推荐 `recommend:use`。创建账号时会补齐默认角色及这两项权限，并在同一事务中绑定账号；角色权限按代码关联，不依赖固定数字 ID。初始化脚本也会补齐已有普通用户角色的这两项权限，前端重新登录后可刷新权限显示。
 
 ## 2. 启动与测试
 
@@ -119,6 +137,10 @@ mvn spring-boot:run
 ```
 
 `LLM_BASE_URL` 为服务商的 API 基础地址，程序追加 `/chat/completions`；是否包含 `/v1` 以服务商文档为准。模型需支持 `tools`、`tool_choice=auto` 和非流式响应。
+
+每次模型调用都会写入 `LLM request`、`LLM response` 与 `LLM usage` 日志：包括短请求 ID、模型名、消息/工具数量、请求字节数、HTTP 状态、耗时，以及服务商返回的 token 与缓存读写用量（若提供）。日志不会记录提问、模型回答或 API Key。一条咨询最多可能触发 3 次模型调用，排查费用时可用相同请求 ID 对照每一轮的 `totalTokens`、`cachedTokens`、`cacheReadTokens` 与 `cacheWriteTokens`。
+
+为防止工具查询结果造成输入费用失控，单个工具结果进入模型上下文前最多保留 24 KB、整条咨询累计最多 48 KB（其中预留 2 KB 用于省略说明）；超限结果会被替换为可识别的截断说明。单次模型请求超过 96 KB 会在发送前被拒绝；每次咨询最多 3 次模型调用、最多 6 次工具调用。达到工具或上下文预算、或进入最后一轮时，以 `tool_choice=none` 要求模型根据已有结果回答；超出剩余额度的工具返回未执行说明，不会继续查询。模型输出上限默认 2048 tokens，可通过 `LLM_MAX_OUTPUT_TOKENS` 调整（1–8192）；此上限不限制输入。`LLM completion` 日志记录结束原因，`finishReason=length` 表示输出截断，接口返回明确错误且不自动重试。Agent 的 `school_detail` 使用独立轻量 SQL：不读取学校或专业描述，仅查询必要字段，且录取明细最多 24 条；面向普通接口的完整院校详情不受该限制。
 
 密钥通过 `System.getenv("LLM_API_KEY")` 显式优先读取当前进程环境变量；未设置时才回退到应用配置。显式设置为空会禁用密钥回退。启动日志显示 `LLM API key: loaded=true, source=process environment LLM_API_KEY`，不输出密钥。修改环境变量后需重新启动后端；从 IDE 启动时，确保运行配置或 IDE 进程已继承该变量。
 

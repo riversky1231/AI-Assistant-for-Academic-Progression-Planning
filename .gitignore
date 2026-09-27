@@ -5,7 +5,11 @@ __pycache__/
 .env
 .env.*
 !.env.example
+!.env.docker.example
 backend/target/
+deploy/server/app.jar
+/backups/
+/xuelezi-server.tar.gz
 
 # Local editor and WeChat DevTools settings
 .vscode/

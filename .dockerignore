@@ -1,0 +1,14 @@
+**
+!backend/
+!backend/pom.xml
+!backend/src/
+!backend/src/**
+!backend/skills/
+!backend/skills/**
+backend/skills/**/.git
+backend/skills/**/.env*
+!sql/
+!sql/**
+!Dockerfile
+**/.env
+**/.env.*

@@ -15,6 +15,7 @@ class MapperXmlTest {
     @ParameterizedTest
     @ValueSource(strings = {
             "mapper/SchoolMapper.xml",
+            "mapper/UserMapper.xml",
             "mapper/PermissionMapper.xml",
             "mapper/RecommendationMapper.xml"
     })

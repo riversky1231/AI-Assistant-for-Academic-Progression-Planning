@@ -54,6 +54,8 @@ Token 在 Redis 中保存，每次通过鉴权后延长 2 小时有效期；不�
 
 公开接口，成功后自动登录并返回同 `/auth/login` 的 Token 结构。账号 3–50 位，只允许字母、数字和下划线；密码 8–100 位；手机号、邮箱、昵称可选。
 
+新账号默认绑定 `user` 角色，拥有院校查询 `school:read` 和志愿推荐 `recommend:use` 权限。首次微信登录和管理员创建账号也使用相同初始化规则，不授予 `account:manage`。创建账号、初始化默认角色权限和绑定角色在同一个数据库事务中完成；初始化失败时不保留创建了一半的账号。
+
 ```json
 { "username": "student01", "password": "Student@123", "nickname": "小陈", "phone": "13800000000", "email": "student@example.com" }
 ```

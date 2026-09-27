@@ -10,13 +10,15 @@ class LlmConfigurationTest {
                         org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration.class))
                 .withUserConfiguration(LlmConfiguration.class)
                 .withPropertyValues("app.llm.enabled=true", "app.llm.base-url=http://127.0.0.1/v1",
-                        "app.llm.api-key=test-file-key", "app.llm.model=test-model", "app.llm.timeout-seconds=12")
+                        "app.llm.api-key=test-file-key", "app.llm.model=test-model", "app.llm.timeout-seconds=12",
+                        "app.llm.max-output-tokens=4096")
                 .run(context -> {
                     assertNull(context.getStartupFailure());
                     var properties = context.getBean(LlmProperties.class);
                     assertTrue(properties.enabled());
                     assertEquals("test-model", properties.model());
                     assertEquals(12, properties.timeoutSeconds());
+                    assertEquals(4096, properties.maxOutputTokens());
                     // Never print an actual process key in assertion diagnostics.
                     assertTrue(LlmConfiguration.resolveApiKey(System.getenv("LLM_API_KEY"), "test-file-key")
                             .equals(properties.apiKey()));

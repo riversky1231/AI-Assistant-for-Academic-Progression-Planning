@@ -5,3 +5,14 @@
 .bold { font-weight: 650; }.code { background: #edf1e8; padding: 2rpx 6rpx; border-radius: 5rpx; font-family: monospace; }
 .pre { font-family: monospace; font-size: 24rpx; background: #f2f4ee; padding: 12rpx 16rpx; border-radius: 8rpx; }
 .quote { border-left: 4rpx solid #c9d6b7; padding-left: 20rpx; color: #7a866e; }
+.table { min-width: 0; max-width: 100%; }
+.table-hint { font-size: 20rpx; color: #7a866e; margin-bottom: 8rpx; }
+.table-scroll { width: 100%; border: 1rpx solid #dce4d4; border-radius: 10rpx; box-sizing: border-box; overflow: hidden; }
+.table-grid { min-width: 100%; font-size: 24rpx; line-height: 1.65; }
+.table-row { display: flex; border-bottom: 1rpx solid #e5eadd; }
+.table-row:last-child { border-bottom: 0; }
+.table-row:nth-child(odd) { background: #f7f9f3; }
+.table-row.table-header { background: #eaf0e1; color: #244c3b; font-weight: 650; }
+.table-cell { flex: 1; min-width: 0; padding: 16rpx 14rpx; border-right: 1rpx solid #e5eadd; white-space: pre-wrap; word-break: break-word; }
+.table-cell:last-child { border-right: 0; }
+.align-left { text-align: left; }.align-center { text-align: center; }.align-right { text-align: right; }
