@@ -75,6 +75,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/smoke_docker.ps1 -Base
 
 ```bash
 docker compose --env-file .env.docker up -d --build --wait --wait-timeout 300
+#主要执行这个
+ docker compose --env-file .env.docker up -d
 ```
 
 检查日志或停止服务：
